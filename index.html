@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Suivi des Candidatures & Lancement Multi-Portails (Adzuna)</title>
+  <title>Cockpit Agents IA — Actualisation à la Demande</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -33,436 +33,185 @@
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
       background: #94a3b8;
     }
-    .kanban-col {
-      min-height: 260px;
+    @keyframes pulseSoft {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.45; }
     }
-    .drag-over {
-      outline: 2px dashed #0284c7;
-      outline-offset: -4px;
-      background-color: #f0f9ff !important;
+    .animate-pulse-soft {
+      animation: pulseSoft 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen antialiased">
-  <!-- Barre de notification non bloquante (remplace alert/confirm) -->
+  <!-- Zone de notifications discrètes -->
   <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
 
-  <!-- En-tête principal -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
+  <!-- En-tête principal avec bouton "Tout actualiser" mis en avant -->
+  <header class="bg-white/95 backdrop-blur-xs border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
       <div class="flex items-start sm:items-center gap-3.5">
-        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-sky-600 via-teal-600 to-indigo-700 text-white flex items-center justify-center shrink-0 shadow-sm">
-          <!-- Inline SVG Launch & Tracking Icon -->
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-600 via-sky-600 to-teal-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+          <!-- Inline SVG Agent Hub Icon -->
           <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
         </div>
         <div>
           <div class="flex flex-wrap items-center gap-2">
             <h1 class="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900">
-              Suivi des Candidatures & Lancement Multi-Portails (Adzuna)
+              Studio Agents IA — Contrôle Manuel
             </h1>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200">
-              Pilotage B2B & Produit
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              Mode 100% manuel (sans auto-refresh)
             </span>
           </div>
           <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Centralisation des offres, diffusion Adzuna & portails partenaires, checklist de lancement et suivi des réponses
+            Déclenchez l'exécution de tous les agents IA uniquement au clic, inspectez leurs règles et consultez les résultats générés
           </p>
         </div>
       </div>
 
-      <!-- Actions globales -->
-      <div class="flex flex-wrap items-center gap-2">
+      <!-- Bouton principal "Tout actualiser" + Horodatage global + Ajout d'agent -->
+      <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div class="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-left sm:text-right">
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Dernière actualisation globale</div>
+          <div id="global-last-refresh" class="text-xs sm:text-sm font-bold text-slate-800 mt-0.5">
+            Aucune actualisation effectuée
+          </div>
+        </div>
+
         <button
           type="button"
-          id="btn-open-add-modal"
-          class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white text-sm font-semibold shadow-xs transition cursor-pointer"
+          id="btn-open-create-agent"
+          class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-xs sm:text-sm font-semibold transition cursor-pointer"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
           </svg>
-          Ajouter une offre / candidature
+          Nouvel agent IA
         </button>
 
         <button
           type="button"
-          id="btn-export-csv"
-          class="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs sm:text-sm font-medium transition cursor-pointer"
-          title="Exporter les candidatures au format CSV"
+          id="btn-refresh-all"
+          class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:bg-indigo-400 text-white text-sm font-bold shadow-sm transition cursor-pointer"
         >
-          <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          CSV
-        </button>
-
-        <button
-          type="button"
-          id="btn-export-json"
-          class="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs sm:text-sm font-medium transition cursor-pointer"
-          title="Exporter les données au format JSON"
-        >
-          <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
-          </svg>
-          JSON
-        </button>
-
-        <button
-          type="button"
-          id="btn-reset-demo"
-          class="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 text-xs sm:text-sm font-medium transition cursor-pointer"
-          title="Réinitialiser les données de démonstration"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <svg id="refresh-all-icon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          Réinitialiser
+          <span id="refresh-all-label">Tout actualiser</span>
         </button>
       </div>
     </div>
   </header>
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-    <!-- 1. TABLEAU DE BORD KPI -->
-    <section aria-label="Indicateurs clés de performance">
-      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
-        <!-- KPI 1 -->
-        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Offres / Suivis</span>
-            <span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-sm">#</span>
-          </div>
-          <div class="mt-3">
-            <div id="kpi-total" class="text-2xl sm:text-3xl font-extrabold text-slate-900">0</div>
-            <p id="kpi-total-sub" class="text-xs text-slate-500 mt-1">Offres & candidatures actives</p>
-          </div>
-        </div>
+    <!-- Bandeau d'état synthétique -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Synthèse des agents IA">
+      <div class="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+        <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">Agents configurés</div>
+        <div id="stat-agents-total" class="text-2xl font-extrabold text-slate-900 mt-1">0</div>
+        <p class="text-xs text-slate-500 mt-1">Déclenchables individuellement ou en bloc</p>
+      </div>
 
-        <!-- KPI 2 -->
-        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Adzuna & Portails</span>
-            <span class="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9" />
-              </svg>
-            </span>
-          </div>
-          <div class="mt-3">
-            <div id="kpi-portails-actifs" class="text-2xl sm:text-3xl font-extrabold text-sky-700">0</div>
-            <p id="kpi-portails-sub" class="text-xs text-slate-500 mt-1">Dont flux Adzuna & partenaires</p>
-          </div>
-        </div>
+      <div class="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+        <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">En cours d'exécution</div>
+        <div id="stat-agents-running" class="text-2xl font-extrabold text-indigo-600 mt-1">0</div>
+        <p class="text-xs text-slate-500 mt-1">Traitement temps réel lors d'un clic</p>
+      </div>
 
-        <!-- KPI 3 -->
-        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Envoyées & Entretiens</span>
-            <span class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </span>
-          </div>
-          <div class="mt-3">
-            <div id="kpi-envoyees-entretiens" class="text-2xl sm:text-3xl font-extrabold text-indigo-700">0</div>
-            <p id="kpi-entretiens-detail" class="text-xs text-slate-500 mt-1">0 entretien(s) planifié(s)</p>
-          </div>
-        </div>
+      <div class="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+        <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">Terminés avec succès</div>
+        <div id="stat-agents-done" class="text-2xl font-extrabold text-emerald-600 mt-1">0</div>
+        <p class="text-xs text-slate-500 mt-1">Données & synthèses actualisées</p>
+      </div>
 
-        <!-- KPI 4 -->
-        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Réponse / Conversion</span>
-            <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-            </span>
-          </div>
-          <div class="mt-3">
-            <div id="kpi-taux-reponse" class="text-2xl sm:text-3xl font-extrabold text-emerald-700">0%</div>
-            <p id="kpi-conversion-sub" class="text-xs text-slate-500 mt-1">0% shortlist / accepté</p>
-          </div>
-        </div>
-
-        <!-- KPI 5 -->
-        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between sm:col-span-2 xl:col-span-1">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Lancement Multi-Portails</span>
-            <span class="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </span>
-          </div>
-          <div class="mt-3">
-            <div class="flex items-baseline justify-between">
-              <div id="kpi-lancement-pct" class="text-2xl sm:text-3xl font-extrabold text-amber-600">0%</div>
-              <span id="kpi-lancement-count" class="text-xs font-semibold text-slate-500">0/0 étapes</span>
-            </div>
-            <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden mt-2">
-              <div id="kpi-lancement-bar" class="h-full bg-gradient-to-r from-sky-500 to-emerald-500 rounded-full transition-all duration-300" style="width: 0%"></div>
-            </div>
-          </div>
-        </div>
+      <div class="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-2xs">
+        <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">En erreur / Simulé</div>
+        <div id="stat-agents-error" class="text-2xl font-extrabold text-rose-600 mt-1">0</div>
+        <p class="text-xs text-slate-500 mt-1">Diagnostiquables dans le journal</p>
       </div>
     </section>
 
-    <!-- GRAPHIQUES INTERACTIFS SVG + CHECKLIST LANCEMENT MULTI-PORTAILS -->
-    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <!-- Graphiques SVG interactifs (5 colonnes) -->
-      <div class="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col justify-between">
-        <div>
-          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-            <div>
-              <h2 class="text-base font-bold text-slate-900">Répartition Visuelle</h2>
-              <p class="text-xs text-slate-500">Cliquez ou survolez une barre pour filtrer rapidement</p>
-            </div>
-            <div class="inline-flex rounded-xl bg-slate-100 p-1 text-xs font-semibold">
-              <button
-                type="button"
-                id="chart-mode-statut"
-                class="px-3 py-1.5 rounded-lg bg-white text-slate-900 shadow-2xs transition cursor-pointer"
-              >
-                Par Statut
-              </button>
-              <button
-                type="button"
-                id="chart-mode-portail"
-                class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition cursor-pointer"
-              >
-                Par Portail
-              </button>
-            </div>
+    <!-- Grille principale : Cartes Agents IA (7 col) + Journal d'activité & Résultats (5 col) -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <!-- Liste des Agents IA -->
+      <div class="lg:col-span-7 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-slate-900">Agents IA Actifs</h2>
+            <p class="text-xs sm:text-sm text-slate-500">
+              Cliquez sur <strong>Tout actualiser</strong> en haut pour exécuter tous les agents, ou inspectez / personnalisez chacun d'eux.
+            </p>
+          </div>
+          <button
+            type="button"
+            id="btn-reset-agents-config"
+            class="self-start sm:self-auto text-xs font-semibold text-slate-600 hover:text-slate-900 underline cursor-pointer"
+          >
+            Restaurer agents par défaut
+          </button>
+        </div>
+
+        <div id="agents-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </div>
+
+      <!-- Journal d'activité & Résultats générés par les agents IA -->
+      <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs p-5 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-slate-900">Journal d'Activité & Résultats IA</h2>
+            <p class="text-xs text-slate-500">Historique des exécutions et sorties générées lors du clic</p>
           </div>
 
-          <!-- Conteneur SVG interactif -->
-          <div id="svg-chart-container" class="w-full bg-slate-50/80 border border-slate-100 rounded-xl p-3"></div>
-          <div id="chart-hover-info" class="mt-2.5 min-h-[20px] text-xs font-medium text-slate-600 flex items-center justify-between">
-            <span>Survolez une catégorie pour voir les détails</span>
-            <button type="button" id="btn-clear-chart-filter" class="hidden text-sky-600 hover:underline font-semibold cursor-pointer">
-              Effacer le filtre
+          <div class="flex items-center gap-2">
+            <select
+              id="log-agent-filter"
+              aria-label="Filtrer le journal par agent"
+              class="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="ALL">Tous les agents</option>
+            </select>
+            <button
+              type="button"
+              id="btn-clear-logs"
+              class="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-600 transition cursor-pointer"
+            >
+              Effacer
             </button>
           </div>
         </div>
 
-        <!-- Résumé rapide des portails -->
-        <div class="mt-4 pt-4 border-t border-slate-100">
-          <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2.5">Portails couverts</div>
-          <div class="flex flex-wrap gap-1.5">
-            <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-sky-50 text-sky-800 border border-sky-200">Adzuna</span>
-            <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-50 text-blue-800 border border-blue-200">France Travail</span>
-            <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-800 border border-indigo-200">LinkedIn</span>
-            <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-violet-50 text-violet-800 border border-violet-200">Indeed</span>
-            <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-teal-50 text-teal-800 border border-teal-200">HelloWork</span>
-            <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200">Welcome to the Jungle</span>
-            <span class="px-2.5 py-1 rounded-lg text-xs font-medium bg-orange-50 text-orange-800 border border-orange-200">Malt / Apec</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Checklist & Pilotage du Lancement Multi-Portails (7 colonnes) -->
-      <div class="lg:col-span-7 bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4 border-b border-slate-100">
-          <div>
-            <h2 class="text-base font-bold text-slate-900">Checklist & Pilotage du Lancement Multi-Portails (Adzuna)</h2>
-            <p class="text-xs text-slate-500 mt-0.5">
-              Préparation des fiches (Product Manager, Support technique & commercial, Consulting), indexation & suivi hebdomadaire
+        <div id="activity-feed" class="space-y-3 max-h-[620px] overflow-y-auto custom-scrollbar pr-1">
+          <div class="text-center py-12 px-4 border border-dashed border-slate-200 rounded-xl bg-slate-50/70">
+            <p class="text-sm font-semibold text-slate-700">Aucune exécution enregistrée pour le moment</p>
+            <p class="text-xs text-slate-500 mt-1">
+              Aucune actualisation n'est lancée au chargement. Cliquez sur <strong>« Tout actualiser »</strong> pour démarrer.
             </p>
           </div>
-          <span id="checklist-badge" class="self-start sm:self-auto px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-            0% complété
-          </span>
         </div>
-
-        <!-- Barre de progression de la checklist -->
-        <div class="mt-3.5 mb-4">
-          <div class="flex items-center justify-between text-xs text-slate-600 mb-1.5">
-            <span>Progression globale du lancement</span>
-            <span id="checklist-fraction" class="font-semibold text-slate-800">0 / 0 étapes</span>
-          </div>
-          <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
-            <div id="checklist-progress-bar" class="h-full bg-emerald-600 rounded-full transition-all duration-300" style="width: 0%"></div>
-          </div>
-        </div>
-
-        <!-- Liste des étapes -->
-        <ul id="checklist-items" class="space-y-2.5 max-h-[300px] overflow-y-auto custom-scrollbar pr-1 flex-1"></ul>
-
-        <!-- Ajout d'une nouvelle étape de lancement -->
-        <form id="form-add-checklist" class="mt-4 pt-4 border-t border-slate-100 flex flex-col sm:flex-row gap-2">
-          <input
-            type="text"
-            id="new-checklist-title"
-            placeholder="Ajouter une tâche de lancement (ex. Publier offre Product Manager Piscine/Spa sur Adzuna & Apec)..."
-            class="flex-1 px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-            required
-          />
-          <select
-            id="new-checklist-tag"
-            aria-label="Catégorie de la tâche"
-            class="px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          >
-            <option value="Adzuna">Adzuna</option>
-            <option value="SEO / ATS">SEO / ATS</option>
-            <option value="Multi-Portails">Multi-Portails</option>
-            <option value="Relances">Relances</option>
-          </select>
-          <button
-            type="submit"
-            class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition shrink-0 cursor-pointer"
-          >
-            + Étape
-          </button>
-        </form>
-      </div>
-    </section>
-
-    <!-- 3. TABLEAU & VUE KANBAN DES OFFRES / CANDIDATURES -->
-    <section class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs space-y-4">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pb-4 border-b border-slate-100">
-        <div>
-          <h2 class="text-base sm:text-lg font-bold text-slate-900">Offres d'Emploi & Candidatures Suivies</h2>
-          <p class="text-xs sm:text-sm text-slate-500">
-            Changez le statut en 1 clic, glissez-déposez les cartes en mode Kanban ou filtrez par portail et mot-clé
-          </p>
-        </div>
-
-        <!-- Bascule Vue Tableau / Vue Kanban -->
-        <div class="inline-flex rounded-xl bg-slate-100 p-1 self-start md:self-auto shrink-0">
-          <button
-            type="button"
-            id="btn-view-table"
-            class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-white text-slate-900 shadow-2xs transition cursor-pointer"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-            </svg>
-            Vue Tableau
-          </button>
-          <button
-            type="button"
-            id="btn-view-kanban"
-            class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 transition cursor-pointer"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-            </svg>
-            Vue Kanban
-          </button>
-        </div>
-      </div>
-
-      <!-- Barre de filtres et recherche -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div class="relative">
-          <label for="filter-search" class="sr-only">Recherche texte</label>
-          <input
-            type="text"
-            id="filter-search"
-            placeholder="Rechercher poste, entreprise, lieu, réf..."
-            class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-          <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
-          </svg>
-        </div>
-
-        <div>
-          <label for="filter-status" class="sr-only">Filtrer par statut</label>
-          <select
-            id="filter-status"
-            class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          >
-            <option value="ALL">Tous les statuts</option>
-            <option value="À publier / Brouillon">À publier / Brouillon</option>
-            <option value="Publié / Candidaté">Publié / Candidaté</option>
-            <option value="En attente de retour">En attente de retour</option>
-            <option value="Entretien">Entretien</option>
-            <option value="Relance à faire">Relance à faire</option>
-            <option value="Accepté / Shortlist">Accepté / Shortlist</option>
-            <option value="Refusé / Clôturé">Refusé / Clôturé</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="filter-portal" class="sr-only">Filtrer par portail</label>
-          <select
-            id="filter-portal"
-            class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          >
-            <option value="ALL">Tous les portails</option>
-            <option value="Adzuna">Adzuna</option>
-            <option value="France Travail">France Travail</option>
-            <option value="LinkedIn">LinkedIn</option>
-            <option value="Indeed">Indeed</option>
-            <option value="HelloWork">HelloWork</option>
-            <option value="Welcome to the Jungle">Welcome to the Jungle</option>
-            <option value="Malt / Apec">Malt / Apec</option>
-          </select>
-        </div>
-
-        <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2">
-          <span class="text-xs text-slate-500 font-medium">Résultats affichés :</span>
-          <span id="filtered-count" class="text-sm font-bold text-slate-900">0</span>
-        </div>
-      </div>
-
-      <!-- Vue Tableau -->
-      <div id="table-view-wrapper" class="overflow-x-auto custom-scrollbar border border-slate-200 rounded-xl">
-        <table class="min-w-full divide-y divide-slate-200 text-left">
-          <thead class="bg-slate-50 text-xs font-semibold uppercase tracking-wider text-slate-500">
-            <tr>
-              <th class="px-4 py-3">Poste & Réf.</th>
-              <th class="px-4 py-3">Entreprise</th>
-              <th class="px-4 py-3">Portail</th>
-              <th class="px-4 py-3">Lieu & Rémunération</th>
-              <th class="px-4 py-3">Statut</th>
-              <th class="px-4 py-3">Date</th>
-              <th class="px-4 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="applications-tbody" class="divide-y divide-slate-100 text-sm bg-white"></tbody>
-        </table>
-      </div>
-
-      <!-- Vue Kanban -->
-      <div id="kanban-view-wrapper" class="hidden overflow-x-auto custom-scrollbar pb-2">
-        <div id="kanban-board" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 min-w-[300px]"></div>
-      </div>
-
-      <!-- État vide -->
-      <div id="empty-state" class="hidden text-center py-12 px-4 border border-dashed border-slate-300 rounded-xl bg-slate-50/60">
-        <p class="text-sm font-semibold text-slate-700">Aucune offre ou candidature ne correspond aux filtres sélectionnés.</p>
-        <p class="text-xs text-slate-500 mt-1">Modifiez vos critères de recherche ou ajoutez une nouvelle ligne de suivi.</p>
-        <button
-          type="button"
-          id="btn-reset-filters"
-          class="mt-3 px-4 py-2 rounded-xl bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer"
-        >
-          Réinitialiser les filtres
-        </button>
       </div>
     </section>
   </main>
 
-  <!-- MODALE AJOUT / ÉDITION D'UNE OFFRE OU CANDIDATURE -->
+  <!-- MODALE D'INSPECTION & PERSONNALISATION / CRÉATION D'AGENT IA -->
   <div
-    id="modal-backdrop"
+    id="agent-modal-backdrop"
     class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-2xs items-center justify-center p-4 overflow-y-auto"
     role="dialog"
     aria-modal="true"
-    aria-labelledby="modal-title"
+    aria-labelledby="agent-modal-title"
   >
     <div class="bg-white rounded-2xl max-w-2xl w-full border border-slate-200 shadow-xl overflow-hidden my-auto">
       <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-        <h3 id="modal-title" class="text-base sm:text-lg font-bold text-slate-900">Ajouter une offre / candidature</h3>
+        <div>
+          <h3 id="agent-modal-title" class="text-base sm:text-lg font-bold text-slate-900">Inspecter / Personnaliser l'Agent IA</h3>
+          <p id="agent-modal-subtitle" class="text-xs text-slate-500 mt-0.5">Paramètres de prompt, contexte et simulation d'exécution</p>
+        </div>
         <button
           type="button"
-          id="btn-close-modal"
+          id="btn-close-agent-modal"
           class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
           aria-label="Fermer la fenêtre"
         >
@@ -472,140 +221,117 @@
         </button>
       </div>
 
-      <form id="form-application" class="p-6 space-y-4 max-h-[82vh] overflow-y-auto custom-scrollbar">
-        <input type="hidden" id="app-id" />
+      <form id="form-agent-editor" class="p-6 space-y-4 max-h-[82vh] overflow-y-auto custom-scrollbar">
+        <input type="hidden" id="edit-agent-id" />
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label for="app-poste" class="block text-xs font-semibold text-slate-700 mb-1">Intitulé du poste / Mission *</label>
+            <label for="edit-agent-name" class="block text-xs font-semibold text-slate-700 mb-1">Nom de l'agent IA *</label>
             <input
               type="text"
-              id="app-poste"
+              id="edit-agent-name"
               required
-              placeholder="Ex. Product Manager Piscines & Spas"
-              class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+              placeholder="Ex. Agent Veille Marché"
+              class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <div>
-            <label for="app-entreprise" class="block text-xs font-semibold text-slate-700 mb-1">Entreprise / Client *</label>
+            <label for="edit-agent-role" class="block text-xs font-semibold text-slate-700 mb-1">Rôle / Spécialité *</label>
             <input
               type="text"
-              id="app-entreprise"
+              id="edit-agent-role"
               required
-              placeholder="Ex. AquaTech Europe"
-              class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+              placeholder="Ex. Synthèse tendances & signaux clés"
+              class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label for="app-portail" class="block text-xs font-semibold text-slate-700 mb-1">Portail source *</label>
+            <label for="edit-agent-model" class="block text-xs font-semibold text-slate-700 mb-1">Profil modèle / moteur</label>
             <select
-              id="app-portail"
-              class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+              id="edit-agent-model"
+              class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="Adzuna">Adzuna</option>
-              <option value="France Travail">France Travail</option>
-              <option value="LinkedIn">LinkedIn</option>
-              <option value="Indeed">Indeed</option>
-              <option value="HelloWork">HelloWork</option>
-              <option value="Welcome to the Jungle">Welcome to the Jungle</option>
-              <option value="Malt / Apec">Malt / Apec</option>
+              <option value="gemini-3-flash-preview (Rapide)">gemini-3-flash-preview (Rapide)</option>
+              <option value="Analyseur Structuré v2">Analyseur Structuré v2</option>
+              <option value="Synthèse Exécutive IA">Synthèse Exécutive IA</option>
             </select>
           </div>
 
           <div>
-            <label for="app-statut" class="block text-xs font-semibold text-slate-700 mb-1">Statut de suivi *</label>
+            <label for="edit-agent-latency" class="block text-xs font-semibold text-slate-700 mb-1">Durée simulée (ms)</label>
+            <input
+              type="number"
+              id="edit-agent-latency"
+              min="250"
+              max="6000"
+              step="100"
+              value="950"
+              class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div>
+            <label for="edit-agent-simulate-error" class="block text-xs font-semibold text-slate-700 mb-1">Test comportement</label>
             <select
-              id="app-statut"
-              class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+              id="edit-agent-simulate-error"
+              class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="À publier / Brouillon">À publier / Brouillon</option>
-              <option value="Publié / Candidaté">Publié / Candidaté</option>
-              <option value="En attente de retour">En attente de retour</option>
-              <option value="Entretien">Entretien</option>
-              <option value="Relance à faire">Relance à faire</option>
-              <option value="Accepté / Shortlist">Accepté / Shortlist</option>
-              <option value="Refusé / Clôturé">Refusé / Clôturé</option>
+              <option value="false">Exécution normale (Terminé)</option>
+              <option value="true">Simuler une erreur d'exécution</option>
             </select>
           </div>
-
-          <div>
-            <label for="app-date" class="block text-xs font-semibold text-slate-700 mb-1">Date *</label>
-            <input
-              type="date"
-              id="app-date"
-              required
-              class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label for="app-lieu" class="block text-xs font-semibold text-slate-700 mb-1">Lieu / Télétravail</label>
-            <input
-              type="text"
-              id="app-lieu"
-              placeholder="Ex. Montpellier / Hybride"
-              class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </div>
-          <div>
-            <label for="app-remuneration" class="block text-xs font-semibold text-slate-700 mb-1">Contrat / TJM / Salaire</label>
-            <input
-              type="text"
-              id="app-remuneration"
-              placeholder="Ex. 55-65k€ ou 550€/j"
-              class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </div>
-          <div>
-            <label for="app-ref" class="block text-xs font-semibold text-slate-700 mb-1">Référence annonce</label>
-            <input
-              type="text"
-              id="app-ref"
-              placeholder="Ex. ADZ-2026-014"
-              class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </div>
         </div>
 
         <div>
-          <label for="app-lien" class="block text-xs font-semibold text-slate-700 mb-1">Lien vers l'offre / fiche</label>
-          <input
-            type="url"
-            id="app-lien"
-            placeholder="https://www.adzuna.fr/..."
-            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-        </div>
-
-        <div>
-          <label for="app-notes" class="block text-xs font-semibold text-slate-700 mb-1">Notes, mots-clés & prochaine relance</label>
+          <label for="edit-agent-instruction" class="block text-xs font-semibold text-slate-700 mb-1">Instruction système / Prompt de l'agent *</label>
           <textarea
-            id="app-notes"
+            id="edit-agent-instruction"
             rows="3"
-            placeholder="Mots-clés SEO/ATS, contact recrutement, points à préparer pour l'entretien..."
-            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+            required
+            placeholder="Décrivez ce que l'agent IA doit analyser, synthétiser ou produire à chaque actualisation..."
+            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           ></textarea>
         </div>
 
-        <div class="pt-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t border-slate-100">
-          <button
-            type="button"
-            id="btn-cancel-modal"
-            class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm font-medium transition cursor-pointer"
-          >
-            Annuler
-          </button>
-          <button
-            type="submit"
-            class="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold shadow-xs transition cursor-pointer"
-          >
-            Enregistrer dans le suivi
-          </button>
+        <div>
+          <label for="edit-agent-context" class="block text-xs font-semibold text-slate-700 mb-1">Données / Contexte d'entrée personnalisé</label>
+          <textarea
+            id="edit-agent-context"
+            rows="2"
+            placeholder="Ajoutez des mots-clés, objectifs ou paramètres spécifiques pour personnaliser le résultat..."
+            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          ></textarea>
+        </div>
+
+        <div class="pt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100">
+          <div>
+            <button
+              type="button"
+              id="btn-delete-agent"
+              class="hidden px-3.5 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition cursor-pointer"
+            >
+              Supprimer cet agent
+            </button>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              id="btn-cancel-agent-modal"
+              class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs sm:text-sm font-medium transition cursor-pointer"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold shadow-2xs transition cursor-pointer"
+            >
+              Enregistrer l'agent IA
+            </button>
+          </div>
         </div>
       </form>
     </div>
@@ -613,255 +339,80 @@
 
   <script>
     // =========================================================================
-    // CONFIGURATION & CONSTANTES
+    // CONFIGURATION & DONNÉES INITIALES (AUCUNE AUTO-ACTUALISATION AU CHARGEMENT)
     // =========================================================================
-    const STORAGE_KEYS = {
-      ITEMS: 'adzuna_cockpit_items_v1',
-      CHECKLIST: 'adzuna_cockpit_checklist_v1',
-      VIEW_MODE: 'adzuna_cockpit_view_v1'
-    };
+    const STORAGE_KEY = 'studio_agents_ia_manuel_v1';
 
-    const STATUSES = [
-      'À publier / Brouillon',
-      'Publié / Candidaté',
-      'En attente de retour',
-      'Entretien',
-      'Relance à faire',
-      'Accepté / Shortlist',
-      'Refusé / Clôturé'
-    ];
-
-    const PORTALS = [
-      'Adzuna',
-      'France Travail',
-      'LinkedIn',
-      'Indeed',
-      'HelloWork',
-      'Welcome to the Jungle',
-      'Malt / Apec'
-    ];
-
-    const STATUS_STYLES = {
-      'À publier / Brouillon': {
-        badge: 'bg-slate-100 text-slate-700 border-slate-200',
-        hex: '#64748b',
-        colHeader: 'bg-slate-100/80 border-slate-200'
-      },
-      'Publié / Candidaté': {
-        badge: 'bg-sky-50 text-sky-700 border-sky-200',
-        hex: '#0284c7',
-        colHeader: 'bg-sky-50/80 border-sky-200'
-      },
-      'En attente de retour': {
-        badge: 'bg-amber-50 text-amber-800 border-amber-200',
-        hex: '#d97706',
-        colHeader: 'bg-amber-50/80 border-amber-200'
-      },
-      'Entretien': {
-        badge: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-        hex: '#4f46e5',
-        colHeader: 'bg-indigo-50/80 border-indigo-200'
-      },
-      'Relance à faire': {
-        badge: 'bg-orange-50 text-orange-800 border-orange-200',
-        hex: '#ea580c',
-        colHeader: 'bg-orange-50/80 border-orange-200'
-      },
-      'Accepté / Shortlist': {
-        badge: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-        hex: '#059669',
-        colHeader: 'bg-emerald-50/80 border-emerald-200'
-      },
-      'Refusé / Clôturé': {
-        badge: 'bg-rose-50 text-rose-700 border-rose-200',
-        hex: '#e11d48',
-        colHeader: 'bg-rose-50/80 border-rose-200'
-      }
-    };
-
-    const PORTAL_STYLES = {
-      'Adzuna': 'bg-sky-50 text-sky-700 border-sky-200',
-      'France Travail': 'bg-blue-50 text-blue-700 border-blue-200',
-      'LinkedIn': 'bg-indigo-50 text-indigo-700 border-indigo-200',
-      'Indeed': 'bg-violet-50 text-violet-700 border-violet-200',
-      'HelloWork': 'bg-teal-50 text-teal-700 border-teal-200',
-      'Welcome to the Jungle': 'bg-amber-50 text-amber-800 border-amber-200',
-      'Malt / Apec': 'bg-orange-50 text-orange-800 border-orange-200'
-    };
-
-    // Données d'exemple réalistes alignées sur le profil produit / support technique & commercial / consulting
-    const DEFAULT_ITEMS = [
+    const DEFAULT_AGENTS = [
       {
-        id: 'item-1',
-        ref: 'ADZ-2026-101',
-        poste: 'Product Manager — Gammes Produits & Support Technique (Piscines & Spas)',
-        entreprise: 'HydraPool Systems',
-        portail: 'Adzuna',
-        lieu: 'Occitanie / Hybride',
-        remuneration: '58k – 68k €',
-        statut: 'Publié / Candidaté',
-        date: '2026-11-18',
-        lien: 'https://www.adzuna.fr',
-        notes: 'Gestion cycle de vie gammes équipements piscine & spa, coordination SAV / support technique et fiches produits B2B.'
+        id: 'agent-veille',
+        name: 'Agent Veille & Signaux',
+        role: 'Détection d’opportunités & tendances clés',
+        model: 'gemini-3-flash-preview (Rapide)',
+        instruction: 'Analyser les signaux récents, prioriser les axes à fort impact et proposer 3 actions concrètes.',
+        context: 'Périmètre : France & Europe, focus B2B, produit et accompagnement opérationnel.',
+        latencyMs: 850,
+        simulateError: false,
+        status: 'idle', // 'idle' | 'running' | 'done' | 'error'
+        lastRunAt: null,
+        lastError: '',
+        lastOutput: ''
       },
       {
-        id: 'item-2',
-        ref: 'LKD-2026-102',
-        poste: 'Responsable Support Technique & Commercial B2B',
-        entreprise: 'AquaFlow Industries',
-        portail: 'LinkedIn',
-        lieu: 'Lyon / Déplacements France',
-        remuneration: '55k – 65k €',
-        statut: 'Entretien',
-        date: '2026-11-15',
-        lien: 'https://www.linkedin.com/jobs',
-        notes: 'Entretien technique planifié avec la direction produit et le pôle prescription distributeurs.'
+        id: 'agent-matching',
+        name: 'Agent Scoring & Priorisation',
+        role: 'Évaluation de pertinence & tri des priorités',
+        model: 'Analyseur Structuré v2',
+        instruction: 'Scorer l’alignement des dossiers sur 100 points, identifier les écarts critiques et classer par priorité.',
+        context: 'Pondération : adéquation métier (40%), impact (35%), faisabilité (25%).',
+        latencyMs: 1150,
+        simulateError: false,
+        status: 'idle',
+        lastRunAt: null,
+        lastError: '',
+        lastOutput: ''
       },
       {
-        id: 'item-3',
-        ref: 'MLT-2026-103',
-        poste: 'Consultant Product Management & Structuration Offre Technique',
-        entreprise: 'Soleil & Eau Consulting',
-        portail: 'Malt / Apec',
-        lieu: 'Full Remote / France',
-        remuneration: '580 € / jour',
-        statut: 'Accepté / Shortlist',
-        date: '2026-11-12',
-        lien: 'https://www.malt.fr',
-        notes: 'Mission cadrage catalogue produits, documentation technique installateurs et parcours client B2B.'
+        id: 'agent-redaction',
+        name: 'Agent Rédaction & Relances',
+        role: 'Génération de messages & plans de suivi',
+        model: 'Synthèse Exécutive IA',
+        instruction: 'Rédiger un message d’approche concis et un plan de relance structuré à J+5 et J+10.',
+        context: 'Ton professionnel, direct et orienté valeur ajoutée.',
+        latencyMs: 1350,
+        simulateError: false,
+        status: 'idle',
+        lastRunAt: null,
+        lastError: '',
+        lastOutput: ''
       },
       {
-        id: 'item-4',
-        ref: 'FT-2026-104',
-        poste: 'Chef de Produit Equipements Hydrauliques & Traitement de l’Eau',
-        entreprise: 'Filtration Sud SAS',
-        portail: 'France Travail',
-        lieu: 'Perpignan / Sur site',
-        remuneration: '50k – 58k €',
-        statut: 'Relance à faire',
-        date: '2026-11-08',
-        lien: 'https://candidat.francetravail.fr',
-        notes: 'Envoyer message de relance ciblé sur l’expertise réglementaire filtration et accompagnement réseau.'
-      },
-      {
-        id: 'item-5',
-        ref: 'HW-2026-105',
-        poste: 'Responsable Avant-Vente & Support Clients Professionnels',
-        entreprise: 'ThermicSpa Groupe',
-        portail: 'HelloWork',
-        lieu: 'Toulouse / Hybride',
-        remuneration: '52k – 60k €',
-        statut: 'En attente de retour',
-        date: '2026-11-14',
-        lien: 'https://www.hellowork.com',
-        notes: 'Candidature transmise avec dossier synthétique sur le support technique niveau 2/3 et formation revendeurs.'
-      },
-      {
-        id: 'item-6',
-        ref: 'ADZ-2026-106',
-        poste: 'Product Owner / Chef de Projet Solutions Connectées Maison & Jardin',
-        entreprise: 'DomoClimat Connect',
-        portail: 'Adzuna',
-        lieu: 'Paris / Télétravail partiel',
-        remuneration: '62k – 72k €',
-        statut: 'À publier / Brouillon',
-        date: '2026-11-22',
-        lien: 'https://www.adzuna.fr',
-        notes: 'Finaliser l’adaptation des mots-clés IoT / support utilisateur avant diffusion multi-portails.'
-      },
-      {
-        id: 'item-7',
-        ref: 'IND-2026-107',
-        poste: 'Directeur Technique & Développement Gammes',
-        entreprise: 'NordBassin Pro',
-        portail: 'Indeed',
-        lieu: 'Lille',
-        remuneration: '65k – 75k €',
-        statut: 'Refusé / Clôturé',
-        date: '2026-11-03',
-        lien: 'https://fr.indeed.com',
-        notes: 'Retour négatif : poste recentré sur une présence quotidienne au siège dans le Nord.'
+        id: 'agent-audit',
+        name: 'Agent Audit & Qualité Données',
+        role: 'Contrôle de cohérence & détection d’anomalies',
+        model: 'gemini-3-flash-preview (Rapide)',
+        instruction: 'Vérifier la complétude des informations, signaler les champs manquants et recommander une correction.',
+        context: 'Contrôle des dates, statuts, sources et cohérence des notes.',
+        latencyMs: 700,
+        simulateError: false,
+        status: 'idle',
+        lastRunAt: null,
+        lastError: '',
+        lastOutput: ''
       }
     ];
 
-    const DEFAULT_CHECKLIST = [
-      {
-        id: 'chk-1',
-        title: 'Structurer les fiches & pitchs (Product Manager, Support technique & commercial, Consulting)',
-        tag: 'SEO / ATS',
-        done: true
-      },
-      {
-        id: 'chk-2',
-        title: 'Optimiser mots-clés ATS & conformité (piscines/spas, B2B, support technique, périmètre/TJM)',
-        tag: 'SEO / ATS',
-        done: true
-      },
-      {
-        id: 'chk-3',
-        title: 'Publier et vérifier l’indexation de l’offre / profil sur Adzuna',
-        tag: 'Adzuna',
-        done: true
-      },
-      {
-        id: 'chk-4',
-        title: 'Diffuser en croisé sur France Travail, LinkedIn, Indeed, HelloWork, WTTJ & Malt/Apec',
-        tag: 'Multi-Portails',
-        done: false
-      },
-      {
-        id: 'chk-5',
-        title: 'Paramétrer alertes quotidiennes & tracker les retours / réponses par portail',
-        tag: 'Adzuna',
-        done: false
-      },
-      {
-        id: 'chk-6',
-        title: 'Planifier relances J+5 / J+7 et revue hebdomadaire de conversion',
-        tag: 'Relances',
-        done: false
-      }
-    ];
-
-    // =========================================================================
-    // ÉTAT DE L'APPLICATION
-    // =========================================================================
-    let state = {
-      items: [],
-      checklist: [],
-      viewMode: 'table',
-      chartMode: 'statut', // 'statut' | 'portail'
-      filters: {
-        search: '',
-        status: 'ALL',
-        portal: 'ALL'
-      }
+    const state = {
+      agents: [],
+      logs: [],
+      globalLastRefresh: null,
+      logFilterAgentId: 'ALL',
+      isRefreshingAll: false
     };
 
     // =========================================================================
-    // UTILITAIRES & PERSISTANCE
+    // UTILITAIRES
     // =========================================================================
-    function showToast(message, type = 'info') {
-      const container = document.getElementById('toast-container');
-      if (!container) return;
-
-      const palette = {
-        success: 'bg-emerald-900 text-white border-emerald-700',
-        error: 'bg-rose-900 text-white border-rose-700',
-        info: 'bg-slate-900 text-white border-slate-700'
-      };
-
-      const toast = document.createElement('div');
-      toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-lg text-xs sm:text-sm font-medium transition-all duration-200 ${palette[type] || palette.info}`;
-      toast.textContent = message;
-      container.appendChild(toast);
-
-      setTimeout(() => {
-        toast.classList.add('opacity-0', 'translate-y-1');
-        setTimeout(() => toast.remove(), 220);
-      }, 3200);
-    }
-
     function escapeHTML(str = '') {
       return String(str)
         .replace(/&/g, '&amp;')
@@ -871,868 +422,637 @@
         .replace(/'/g, '&#39;');
     }
 
-    function saveState() {
-      try {
-        localStorage.setItem(STORAGE_KEYS.ITEMS, JSON.stringify(state.items));
-        localStorage.setItem(STORAGE_KEYS.CHECKLIST, JSON.stringify(state.checklist));
-        localStorage.setItem(STORAGE_KEYS.VIEW_MODE, state.viewMode);
-      } catch (err) {
-        console.error('Erreur sauvegarde localStorage :', err);
-        showToast('Impossible de sauvegarder localement (stockage saturé ou restreint).', 'error');
-      }
-    }
-
-    function loadState() {
-      try {
-        const rawItems = localStorage.getItem(STORAGE_KEYS.ITEMS);
-        const rawChecklist = localStorage.getItem(STORAGE_KEYS.CHECKLIST);
-        const rawView = localStorage.getItem(STORAGE_KEYS.VIEW_MODE);
-
-        state.items = rawItems ? JSON.parse(rawItems) : structuredClone(DEFAULT_ITEMS);
-        state.checklist = rawChecklist ? JSON.parse(rawChecklist) : structuredClone(DEFAULT_CHECKLIST);
-        state.viewMode = rawView === 'kanban' ? 'kanban' : 'table';
-
-        if (!Array.isArray(state.items)) state.items = structuredClone(DEFAULT_ITEMS);
-        if (!Array.isArray(state.checklist)) state.checklist = structuredClone(DEFAULT_CHECKLIST);
-      } catch (err) {
-        console.error('Erreur chargement localStorage :', err);
-        state.items = structuredClone(DEFAULT_ITEMS);
-        state.checklist = structuredClone(DEFAULT_CHECKLIST);
-        state.viewMode = 'table';
-      }
-    }
-
-    function getFilteredItems() {
-      const q = state.filters.search.trim().toLowerCase();
-      return state.items.filter((item) => {
-        const matchStatus = state.filters.status === 'ALL' || item.statut === state.filters.status;
-        const matchPortal = state.filters.portal === 'ALL' || item.portail === state.filters.portal;
-        const haystack = [
-          item.poste,
-          item.entreprise,
-          item.lieu,
-          item.ref,
-          item.portail,
-          item.remuneration,
-          item.notes
-        ]
-          .join(' ')
-          .toLowerCase();
-        const matchSearch = !q || haystack.includes(q);
-        return matchStatus && matchPortal && matchSearch;
+    function formatTimestamp(dateObj = new Date()) {
+      const d = dateObj instanceof Date ? dateObj : new Date(dateObj);
+      if (Number.isNaN(d.getTime())) return '—';
+      return d.toLocaleString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
       });
     }
 
-    // =========================================================================
-    // RENDU KPI
-    // =========================================================================
-    function renderKPIs() {
-      const total = state.items.length;
-      const adzunaOrPortails = state.items.filter((i) =>
-        ['Adzuna', 'France Travail', 'LinkedIn', 'Indeed', 'HelloWork', 'Welcome to the Jungle', 'Malt / Apec'].includes(i.portail) &&
-        i.statut !== 'À publier / Brouillon'
-      ).length;
-      const adzunaCount = state.items.filter((i) => i.portail === 'Adzuna').length;
-
-      const sentStatuses = ['Publié / Candidaté', 'En attente de retour', 'Entretien', 'Relance à faire', 'Accepté / Shortlist'];
-      const sentOrInterviewCount = state.items.filter((i) => sentStatuses.includes(i.statut)).length;
-      const interviewCount = state.items.filter((i) => i.statut === 'Entretien').length;
-
-      const responseBase = state.items.filter((i) => i.statut !== 'À publier / Brouillon').length;
-      const respondedCount = state.items.filter((i) =>
-        ['Entretien', 'Accepté / Shortlist', 'Refusé / Clôturé'].includes(i.statut)
-      ).length;
-      const shortlistAcceptedCount = state.items.filter((i) => i.statut === 'Accepté / Shortlist').length;
-
-      const responseRate = responseBase > 0 ? Math.round((respondedCount / responseBase) * 100) : 0;
-      const conversionRate = responseBase > 0 ? Math.round((shortlistAcceptedCount / responseBase) * 100) : 0;
-
-      const totalSteps = state.checklist.length;
-      const completedSteps = state.checklist.filter((c) => c.done).length;
-      const launchPct = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
-
-      document.getElementById('kpi-total').textContent = String(total);
-      document.getElementById('kpi-total-sub').textContent = `${total} offre(s) / candidature(s) suivie(s)`;
-
-      document.getElementById('kpi-portails-actifs').textContent = String(adzunaOrPortails);
-      document.getElementById('kpi-portails-sub').textContent = `Dont ${adzunaCount} ligne(s) via Adzuna`;
-
-      document.getElementById('kpi-envoyees-entretiens').textContent = String(sentOrInterviewCount);
-      document.getElementById('kpi-entretiens-detail').textContent = `${interviewCount} entretien(s) planifié(s)`;
-
-      document.getElementById('kpi-taux-reponse').textContent = `${responseRate}%`;
-      document.getElementById('kpi-conversion-sub').textContent = `${conversionRate}% shortlist / accepté (${shortlistAcceptedCount})`;
-
-      document.getElementById('kpi-lancement-pct').textContent = `${launchPct}%`;
-      document.getElementById('kpi-lancement-count').textContent = `${completedSteps}/${totalSteps} étapes`;
-      document.getElementById('kpi-lancement-bar').style.width = `${launchPct}%`;
-    }
-
-    // =========================================================================
-    // GRAPHIQUE INTERACTIF SVG (STATUTS & PORTAILS)
-    // =========================================================================
-    function renderSVGChart() {
-      const container = document.getElementById('svg-chart-container');
-      const infoEl = document.getElementById('chart-hover-info');
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
       if (!container) return;
 
-      const isStatut = state.chartMode === 'statut';
-      const labels = isStatut ? STATUSES : PORTALS;
+      const styles = {
+        success: 'bg-emerald-900 text-white border-emerald-700',
+        error: 'bg-rose-900 text-white border-rose-700',
+        info: 'bg-slate-900 text-white border-slate-700'
+      };
 
-      const data = labels.map((label, idx) => {
-        const count = state.items.filter((item) =>
-          isStatut ? item.statut === label : item.portail === label
-        ).length;
+      const el = document.createElement('div');
+      el.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-lg text-xs sm:text-sm font-medium transition-all duration-200 ${styles[type] || styles.info}`;
+      el.textContent = message;
+      container.appendChild(el);
 
-        const fallbackColors = ['#0284c7', '#2563eb', '#4f46e5', '#7c3aed', '#0d9488', '#d97706', '#ea580c'];
-        const color = isStatut
-          ? (STATUS_STYLES[label]?.hex || '#0284c7')
-          : fallbackColors[idx % fallbackColors.length];
+      setTimeout(() => {
+        el.classList.add('opacity-0', 'translate-y-1');
+        setTimeout(() => el.remove(), 220);
+      }, 3000);
+    }
 
-        const activeFilter = isStatut ? state.filters.status === label : state.filters.portal === label;
-        return { label, count, color, activeFilter };
-      });
+    function saveConfigToStorage() {
+      try {
+        // On sauvegarde la configuration des agents (en remettant le statut à 'idle' au repos si besoin, ou en conservant la config)
+        const cleanAgents = state.agents.map((a) => ({
+          id: a.id,
+          name: a.name,
+          role: a.role,
+          model: a.model,
+          instruction: a.instruction,
+          context: a.context,
+          latencyMs: a.latencyMs,
+          simulateError: Boolean(a.simulateError),
+          status: a.status === 'running' ? 'idle' : a.status,
+          lastRunAt: a.lastRunAt || null,
+          lastError: a.lastError || '',
+          lastOutput: a.lastOutput || ''
+        }));
 
-      const maxVal = Math.max(1, ...data.map((d) => d.count));
-      const rowHeight = 34;
-      const topPad = 8;
-      const svgHeight = topPad + data.length * rowHeight + 8;
-      const svgWidth = 440;
-      const labelWidth = 148;
-      const barAreaStart = labelWidth + 10;
-      const maxBarWidth = svgWidth - barAreaStart - 44;
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            agents: cleanAgents,
+            globalLastRefresh: state.globalLastRefresh
+          })
+        );
+      } catch (err) {
+        console.error('Erreur sauvegarde localStorage :', err);
+      }
+    }
 
-      const barsMarkup = data
-        .map((d, i) => {
-          const y = topPad + i * rowHeight;
-          const barWidth = d.count > 0 ? Math.max(8, Math.round((d.count / maxVal) * maxBarWidth)) : 0;
-          const shortLabel = d.label.length > 21 ? `${d.label.slice(0, 20)}…` : d.label;
-          const opacity = d.activeFilter ? '1' : '0.92';
-          const strokeAttr = d.activeFilter ? 'stroke="#0f172a" stroke-width="2"' : '';
-
-          return `
-            <g
-              class="chart-bar-group cursor-pointer"
-              data-mode="${isStatut ? 'statut' : 'portail'}"
-              data-value="${escapeHTML(d.label)}"
-              data-count="${d.count}"
-              style="opacity: ${opacity};"
-            >
-              <text x="0" y="${y + 16}" font-size="11.5" font-weight="${d.activeFilter ? '700' : '600'}" fill="#334155">
-                ${escapeHTML(shortLabel)}
-              </text>
-              <rect
-                x="${barAreaStart}"
-                y="${y + 4}"
-                width="${maxBarWidth}"
-                height="18"
-                rx="6"
-                fill="#e2e8f0"
-              />
-              <rect
-                x="${barAreaStart}"
-                y="${y + 4}"
-                width="${barWidth}"
-                height="18"
-                rx="6"
-                fill="${d.color}"
-                ${strokeAttr}
-              />
-              <text
-                x="${barAreaStart + maxBarWidth + 8}"
-                y="${y + 17}"
-                font-size="12"
-                font-weight="700"
-                fill="#0f172a"
-              >
-                ${d.count}
-              </text>
-            </g>
-          `;
-        })
-        .join('');
-
-      container.innerHTML = `
-        <svg
-          viewBox="0 0 ${svgWidth} ${svgHeight}"
-          class="w-full h-auto select-none"
-          role="img"
-          aria-label="Graphique de répartition ${isStatut ? 'par statut' : 'par portail'}"
-        >
-          ${barsMarkup}
-        </svg>
-      `;
-
-      // Interactions survol & clic sur chaque barre SVG
-      container.querySelectorAll('.chart-bar-group').forEach((group) => {
-        const val = group.dataset.value || '';
-        const count = Number(group.dataset.count || 0);
-        const mode = group.dataset.mode;
-
-        group.addEventListener('mouseenter', () => {
-          const pct = state.items.length > 0 ? Math.round((count / state.items.length) * 100) : 0;
-          infoEl.firstElementChild.textContent = `${val} : ${count} élément(s) (${pct}% du total) — Cliquer pour filtrer`;
-        });
-
-        group.addEventListener('mouseleave', () => {
-          infoEl.firstElementChild.textContent = 'Survolez une catégorie pour voir les détails';
-        });
-
-        group.addEventListener('click', () => {
-          if (mode === 'statut') {
-            state.filters.status = state.filters.status === val ? 'ALL' : val;
-            document.getElementById('filter-status').value = state.filters.status;
-          } else {
-            state.filters.portal = state.filters.portal === val ? 'ALL' : val;
-            document.getElementById('filter-portal').value = state.filters.portal;
-          }
-          renderAll();
-        });
-      });
-
-      const btnClear = document.getElementById('btn-clear-chart-filter');
-      const hasActiveFilter = state.filters.status !== 'ALL' || state.filters.portal !== 'ALL';
-      btnClear.classList.toggle('hidden', !hasActiveFilter);
+    function loadConfigFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          state.agents = structuredClone(DEFAULT_AGENTS);
+          state.globalLastRefresh = null;
+          return;
+        }
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed.agents) && parsed.agents.length > 0) {
+          state.agents = parsed.agents.map((a) => ({
+            ...a,
+            status: a.status === 'running' ? 'idle' : (a.status || 'idle'),
+            latencyMs: Number(a.latencyMs) || 900,
+            simulateError: Boolean(a.simulateError)
+          }));
+        } else {
+          state.agents = structuredClone(DEFAULT_AGENTS);
+        }
+        state.globalLastRefresh = parsed.globalLastRefresh || null;
+      } catch (err) {
+        console.error('Erreur lecture localStorage :', err);
+        state.agents = structuredClone(DEFAULT_AGENTS);
+        state.globalLastRefresh = null;
+      }
     }
 
     // =========================================================================
-    // RENDU CHECKLIST LANCEMENT MULTI-PORTAILS
+    // MOTEUR D'EXÉCUTION DES AGENTS IA (DÉCLENCHÉ UNIQUEMENT AU CLIC)
     // =========================================================================
-    function renderChecklist() {
-      const listEl = document.getElementById('checklist-items');
-      const total = state.checklist.length;
-      const doneCount = state.checklist.filter((c) => c.done).length;
-      const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+    function generateAgentResultText(agent, runIndex) {
+      const ctxSnippet = agent.context
+        ? agent.context.slice(0, 90)
+        : 'Paramètres standards';
+      const score = 74 + ((runIndex * 7 + agent.name.length * 3) % 23);
 
-      document.getElementById('checklist-badge').textContent = `${pct}% complété`;
-      document.getElementById('checklist-fraction').textContent = `${doneCount} / ${total} étapes`;
-      document.getElementById('checklist-progress-bar').style.width = `${pct}%`;
+      return [
+        `Synthèse (${agent.model}) sur : "${ctxSnippet}".`,
+        `Indice de pertinence évalué à ${score}/100 — Priorité haute identifiée et prête pour action.`,
+        `Prochaine étape recommandée : valider la synthèse et déclencher le suivi associé.`
+      ].join(' ');
+    }
 
-      if (total === 0) {
-        listEl.innerHTML = `<li class="text-sm text-slate-500 py-4 text-center">Aucune étape définie. Ajoutez une tâche ci-dessous.</li>`;
-        return;
+    async function runSingleAgent(agentId, triggerSource = 'manuel') {
+      const agent = state.agents.find((a) => a.id === agentId);
+      if (!agent) return { ok: false, agentId };
+
+      agent.status = 'running';
+      agent.lastError = '';
+      renderStats();
+      renderAgentsGrid();
+
+      const startedAt = new Date();
+      const waitTime = Math.max(250, Math.min(6000, Number(agent.latencyMs) || 900));
+
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
+
+      const finishedAt = new Date();
+      agent.lastRunAt = finishedAt.toISOString();
+
+      if (agent.simulateError) {
+        agent.status = 'error';
+        agent.lastError = `Échec simulé lors de l'exécution de "${agent.name}" (vérifiez les paramètres ou désactivez la simulation d'erreur).`;
+
+        state.logs.unshift({
+          id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          agentId: agent.id,
+          agentName: agent.name,
+          status: 'error',
+          triggerSource,
+          timestamp: finishedAt.toISOString(),
+          durationMs: finishedAt.getTime() - startedAt.getTime(),
+          message: agent.lastError
+        });
+
+        saveConfigToStorage();
+        renderStats();
+        renderAgentsGrid();
+        renderActivityFeed();
+        return { ok: false, agentId: agent.id };
       }
 
-      listEl.innerHTML = state.checklist
-        .map(
-          (step) => `
-          <li class="flex items-start justify-between gap-3 p-3 rounded-xl border ${step.done ? 'bg-slate-50/80 border-slate-200/70' : 'bg-white border-slate-200'} transition">
-            <label class="flex items-start gap-3 cursor-pointer flex-1 min-w-0">
-              <input
-                type="checkbox"
-                class="mt-0.5 w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer shrink-0"
-                ${step.done ? 'checked' : ''}
-                data-checklist-toggle="${escapeHTML(step.id)}"
-              />
-              <span class="text-xs sm:text-sm leading-snug ${step.done ? 'line-through text-slate-400' : 'text-slate-800 font-medium'}">
-                ${escapeHTML(step.title)}
-              </span>
-            </label>
-            <div class="flex items-center gap-2 shrink-0">
-              <span class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-                ${escapeHTML(step.tag || 'Adzuna')}
-              </span>
-              <button
-                type="button"
-                data-checklist-delete="${escapeHTML(step.id)}"
-                class="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-                title="Supprimer cette étape"
-                aria-label="Supprimer cette étape"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            </div>
-          </li>
-        `
-        )
-        .join('');
+      const outputText = generateAgentResultText(agent, state.logs.length + 1);
+      agent.status = 'done';
+      agent.lastOutput = outputText;
+
+      state.logs.unshift({
+        id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        agentId: agent.id,
+        agentName: agent.name,
+        status: 'done',
+        triggerSource,
+        timestamp: finishedAt.toISOString(),
+        durationMs: finishedAt.getTime() - startedAt.getTime(),
+        message: outputText
+      });
+
+      // Limiter le journal aux 80 dernières entrées pour garder une interface fluide
+      if (state.logs.length > 80) {
+        state.logs.length = 80;
+      }
+
+      saveConfigToStorage();
+      renderStats();
+      renderAgentsGrid();
+      renderActivityFeed();
+      return { ok: true, agentId: agent.id };
+    }
+
+    async function refreshAllAgents() {
+      if (state.isRefreshingAll || state.agents.length === 0) return;
+
+      state.isRefreshingAll = true;
+      const btnAll = document.getElementById('btn-refresh-all');
+      const labelAll = document.getElementById('refresh-all-label');
+      const iconAll = document.getElementById('refresh-all-icon');
+
+      btnAll.disabled = true;
+      labelAll.textContent = 'Actualisation en cours...';
+      iconAll.classList.add('animate-spin');
+
+      // Passe tous les agents en file d'attente / en cours visuellement
+      state.agents.forEach((a) => {
+        a.status = 'running';
+        a.lastError = '';
+      });
+      renderStats();
+      renderAgentsGrid();
+
+      const results = [];
+      for (const agent of state.agents) {
+        const res = await runSingleAgent(agent.id, 'Tout actualiser');
+        results.push(res);
+      }
+
+      const now = new Date();
+      state.globalLastRefresh = now.toISOString();
+      document.getElementById('global-last-refresh').textContent = formatTimestamp(now);
+      saveConfigToStorage();
+
+      state.isRefreshingAll = false;
+      btnAll.disabled = false;
+      labelAll.textContent = 'Tout actualiser';
+      iconAll.classList.remove('animate-spin');
+
+      renderStats();
+      renderAgentsGrid();
+      renderActivityFeed();
+
+      const successCount = results.filter((r) => r.ok).length;
+      const errorCount = results.length - successCount;
+
+      if (errorCount > 0) {
+        showToast(
+          `Actualisation terminée : ${successCount} réussi(s), ${errorCount} en erreur.`,
+          'error'
+        );
+      } else {
+        showToast(
+          `Tous les agents IA (${successCount}) ont été actualisés à ${formatTimestamp(now)}.`,
+          'success'
+        );
+      }
     }
 
     // =========================================================================
-    // RENDU VUE TABLEAU & VUE KANBAN
+    // RENDU UI (STATUTS, CARTES AGENTS, JOURNAL, FILTRE)
     // =========================================================================
-    function buildStatusSelectHTML(item) {
-      const options = STATUSES.map(
-        (st) => `<option value="${escapeHTML(st)}" ${item.statut === st ? 'selected' : ''}>${escapeHTML(st)}</option>`
-      ).join('');
-      const styleClass = STATUS_STYLES[item.statut]?.badge || 'bg-slate-100 text-slate-700 border-slate-200';
-
-      return `
-        <select
-          aria-label="Statut pour ${escapeHTML(item.poste)}"
-          data-status-select="${escapeHTML(item.id)}"
-          class="px-2.5 py-1.5 rounded-lg text-xs font-semibold border ${styleClass} focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
-        >
-          ${options}
-        </select>
-      `;
-    }
-
-    function buildPortalBadgeHTML(portal) {
-      const cls = PORTAL_STYLES[portal] || 'bg-slate-100 text-slate-700 border-slate-200';
-      return `<span class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${cls}">${escapeHTML(portal)}</span>`;
-    }
-
-    function renderTableView(items) {
-      const tbody = document.getElementById('applications-tbody');
-      tbody.innerHTML = items
-        .map((item) => {
-          const safeLink = item.lien && /^https?:\/\//i.test(item.lien) ? item.lien : '';
+    function getStatusBadgeHTML(status) {
+      switch (status) {
+        case 'running':
           return `
-            <tr class="hover:bg-slate-50/80 transition align-top">
-              <td class="px-4 py-3.5 max-w-xs">
-                <div class="font-semibold text-slate-900">${escapeHTML(item.poste)}</div>
-                <div class="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-500">
-                  ${item.ref ? `<span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">${escapeHTML(item.ref)}</span>` : ''}
-                  ${safeLink ? `<a href="${escapeHTML(safeLink)}" target="_blank" rel="noopener noreferrer" class="text-sky-600 hover:underline font-medium">Voir l'offre ↗</a>` : ''}
-                </div>
-                ${item.notes ? `<p class="text-xs text-slate-500 mt-1.5 line-clamp-2">${escapeHTML(item.notes)}</p>` : ''}
-              </td>
-              <td class="px-4 py-3.5 font-medium text-slate-800 whitespace-nowrap">
-                ${escapeHTML(item.entreprise)}
-              </td>
-              <td class="px-4 py-3.5 whitespace-nowrap">
-                ${buildPortalBadgeHTML(item.portail)}
-              </td>
-              <td class="px-4 py-3.5 text-xs text-slate-600">
-                <div class="font-medium text-slate-800">${escapeHTML(item.lieu || '—')}</div>
-                <div class="text-slate-500 mt-0.5">${escapeHTML(item.remuneration || 'Non précisé')}</div>
-              </td>
-              <td class="px-4 py-3.5 whitespace-nowrap">
-                ${buildStatusSelectHTML(item)}
-              </td>
-              <td class="px-4 py-3.5 text-xs text-slate-500 whitespace-nowrap">
-                ${escapeHTML(item.date || '—')}
-              </td>
-              <td class="px-4 py-3.5 text-right whitespace-nowrap">
-                <div class="inline-flex items-center gap-1">
-                  <button
-                    type="button"
-                    data-edit-id="${escapeHTML(item.id)}"
-                    class="p-1.5 rounded-lg text-slate-500 hover:text-sky-700 hover:bg-sky-50 transition cursor-pointer"
-                    title="Modifier"
-                    aria-label="Modifier ${escapeHTML(item.poste)}"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    data-delete-id="${escapeHTML(item.id)}"
-                    class="p-1.5 rounded-lg text-slate-500 hover:text-rose-700 hover:bg-rose-50 transition cursor-pointer"
-                    title="Supprimer"
-                    aria-label="Supprimer ${escapeHTML(item.poste)}"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
-              </td>
-            </tr>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+              <span class="w-2 h-2 rounded-full bg-indigo-600 animate-ping"></span>
+              En cours d'exécution
+            </span>
           `;
-        })
-        .join('');
+        case 'done':
+          return `
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              Terminé
+            </span>
+          `;
+        case 'error':
+          return `
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+              <span class="w-2 h-2 rounded-full bg-rose-600"></span>
+              Erreur
+            </span>
+          `;
+        default:
+          return `
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+              <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+              En attente
+            </span>
+          `;
+      }
     }
 
-    function renderKanbanView(items) {
-      const board = document.getElementById('kanban-board');
-      board.innerHTML = STATUSES.map((statusName) => {
-        const colItems = items.filter((item) => item.statut === statusName);
-        const headerStyle = STATUS_STYLES[statusName]?.colHeader || 'bg-slate-100 border-slate-200';
-        const dotColor = STATUS_STYLES[statusName]?.hex || '#64748b';
+    function renderStats() {
+      const total = state.agents.length;
+      const running = state.agents.filter((a) => a.status === 'running').length;
+      const done = state.agents.filter((a) => a.status === 'done').length;
+      const errors = state.agents.filter((a) => a.status === 'error').length;
 
-        const cardsHTML = colItems
-          .map((item) => {
-            const safeLink = item.lien && /^https?:\/\//i.test(item.lien) ? item.lien : '';
-            return `
-              <div
-                draggable="true"
-                data-drag-id="${escapeHTML(item.id)}"
-                class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs hover:shadow-sm transition space-y-2.5 cursor-grab active:cursor-grabbing"
-              >
-                <div class="flex items-start justify-between gap-2">
-                  ${buildPortalBadgeHTML(item.portail)}
-                  <div class="flex items-center gap-0.5 shrink-0">
-                    <button
-                      type="button"
-                      data-edit-id="${escapeHTML(item.id)}"
-                      class="p-1 rounded-md text-slate-400 hover:text-sky-700 hover:bg-sky-50 cursor-pointer"
-                      title="Modifier"
-                    >
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      data-delete-id="${escapeHTML(item.id)}"
-                      class="p-1 rounded-md text-slate-400 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
-                      title="Supprimer"
-                    >
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
+      document.getElementById('stat-agents-total').textContent = String(total);
+      document.getElementById('stat-agents-running').textContent = String(running);
+      document.getElementById('stat-agents-done').textContent = String(done);
+      document.getElementById('stat-agents-error').textContent = String(errors);
 
-                <div>
-                  <h4 class="text-xs sm:text-sm font-bold text-slate-900 leading-snug">${escapeHTML(item.poste)}</h4>
-                  <p class="text-xs font-medium text-slate-600 mt-0.5">${escapeHTML(item.entreprise)}</p>
-                </div>
+      const globalEl = document.getElementById('global-last-refresh');
+      globalEl.textContent = state.globalLastRefresh
+        ? formatTimestamp(state.globalLastRefresh)
+        : 'Aucune actualisation effectuée';
+    }
 
-                <div class="text-[11px] text-slate-500 flex flex-wrap items-center justify-between gap-1">
-                  <span>${escapeHTML(item.lieu || 'Lieu non défini')}</span>
-                  <span>${escapeHTML(item.date || '')}</span>
-                </div>
+    function renderLogFilterOptions() {
+      const select = document.getElementById('log-agent-filter');
+      const currentVal = state.logFilterAgentId;
 
-                ${item.remuneration ? `<div class="text-[11px] font-semibold text-slate-700 bg-slate-50 px-2 py-1 rounded-lg">${escapeHTML(item.remuneration)}</div>` : ''}
+      const options = [
+        `<option value="ALL" ${currentVal === 'ALL' ? 'selected' : ''}>Tous les agents</option>`,
+        ...state.agents.map(
+          (a) => `<option value="${escapeHTML(a.id)}" ${currentVal === a.id ? 'selected' : ''}>${escapeHTML(a.name)}</option>`
+        )
+      ];
 
-                ${item.notes ? `<p class="text-[11px] text-slate-500 line-clamp-2">${escapeHTML(item.notes)}</p>` : ''}
+      select.innerHTML = options.join('');
+    }
 
-                <div class="pt-1 flex items-center justify-between gap-2">
-                  <div class="flex-1">
-                    ${buildStatusSelectHTML(item)}
-                  </div>
-                  ${safeLink ? `<a href="${escapeHTML(safeLink)}" target="_blank" rel="noopener noreferrer" class="text-[11px] font-semibold text-sky-600 hover:underline shrink-0">Lien ↗</a>` : ''}
-                </div>
-              </div>
-            `;
-          })
-          .join('');
+    function renderAgentsGrid() {
+      const grid = document.getElementById('agents-grid');
+      if (!grid) return;
 
-        return `
-          <div
-            data-drop-status="${escapeHTML(statusName)}"
-            class="kanban-col rounded-2xl border border-slate-200/90 bg-slate-50/70 p-3 flex flex-col gap-3 transition"
-          >
-            <div class="flex items-center justify-between px-2.5 py-2 rounded-xl border ${headerStyle}">
-              <div class="flex items-center gap-2 min-w-0">
-                <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${dotColor}"></span>
-                <span class="text-xs font-bold text-slate-800 truncate">${escapeHTML(statusName)}</span>
-              </div>
-              <span class="px-2 py-0.5 rounded-full text-xs font-extrabold bg-white text-slate-700 border border-slate-200/80">
-                ${colItems.length}
-              </span>
-            </div>
-            <div class="space-y-2.5 flex-1">
-              ${cardsHTML || `<div class="text-center py-8 text-xs text-slate-400 border border-dashed border-slate-200 rounded-xl">Déposer ici</div>`}
-            </div>
+      if (state.agents.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center">
+            <p class="text-sm font-semibold text-slate-700">Aucun agent IA configuré.</p>
+            <p class="text-xs text-slate-500 mt-1">Cliquez sur « Nouvel agent IA » pour en créer un.</p>
           </div>
         `;
-      }).join('');
-
-      // Drag & Drop sur colonnes Kanban
-      board.querySelectorAll('[data-drag-id]').forEach((card) => {
-        card.addEventListener('dragstart', (e) => {
-          e.dataTransfer.setData('text/plain', card.dataset.dragId || '');
-          card.classList.add('opacity-60');
-        });
-        card.addEventListener('dragend', () => {
-          card.classList.remove('opacity-60');
-          board.querySelectorAll('.kanban-col').forEach((c) => c.classList.remove('drag-over'));
-        });
-      });
-
-      board.querySelectorAll('[data-drop-status]').forEach((col) => {
-        col.addEventListener('dragover', (e) => {
-          e.preventDefault();
-          col.classList.add('drag-over');
-        });
-        col.addEventListener('dragleave', () => {
-          col.classList.remove('drag-over');
-        });
-        col.addEventListener('drop', (e) => {
-          e.preventDefault();
-          col.classList.remove('drag-over');
-          const itemId = e.dataTransfer.getData('text/plain');
-          const targetStatus = col.dataset.dropStatus;
-          if (itemId && targetStatus) {
-            updateItemStatus(itemId, targetStatus);
-          }
-        });
-      });
-    }
-
-    function renderApplications() {
-      const filtered = getFilteredItems();
-      const tableWrapper = document.getElementById('table-view-wrapper');
-      const kanbanWrapper = document.getElementById('kanban-view-wrapper');
-      const emptyState = document.getElementById('empty-state');
-      const btnTable = document.getElementById('btn-view-table');
-      const btnKanban = document.getElementById('btn-view-kanban');
-
-      document.getElementById('filtered-count').textContent = String(filtered.length);
-
-      const isKanban = state.viewMode === 'kanban';
-      btnTable.className = isKanban
-        ? 'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 transition cursor-pointer'
-        : 'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-white text-slate-900 shadow-2xs transition cursor-pointer';
-
-      btnKanban.className = isKanban
-        ? 'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold bg-white text-slate-900 shadow-2xs transition cursor-pointer'
-        : 'inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-semibold text-slate-600 hover:text-slate-900 transition cursor-pointer';
-
-      if (filtered.length === 0) {
-        tableWrapper.classList.add('hidden');
-        kanbanWrapper.classList.add('hidden');
-        emptyState.classList.remove('hidden');
         return;
       }
 
-      emptyState.classList.add('hidden');
-      if (isKanban) {
-        tableWrapper.classList.add('hidden');
-        kanbanWrapper.classList.remove('hidden');
-        renderKanbanView(filtered);
-      } else {
-        kanbanWrapper.classList.add('hidden');
-        tableWrapper.classList.remove('hidden');
-        renderTableView(filtered);
+      grid.innerHTML = state.agents
+        .map((agent) => {
+          const isRunning = agent.status === 'running';
+          const borderAccent =
+            agent.status === 'running'
+              ? 'border-indigo-300 ring-2 ring-indigo-500/15'
+              : agent.status === 'error'
+              ? 'border-rose-200'
+              : 'border-slate-200/90';
+
+          return `
+            <article class="bg-white rounded-2xl border ${borderAccent} p-4 sm:p-5 shadow-2xs flex flex-col justify-between gap-4 transition">
+              <div class="space-y-2.5">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <h3 class="text-sm sm:text-base font-bold text-slate-900 truncate">${escapeHTML(agent.name)}</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">${escapeHTML(agent.role)}</p>
+                  </div>
+                  <div class="shrink-0">
+                    ${getStatusBadgeHTML(agent.status)}
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-600">
+                  <span class="px-2 py-0.5 rounded-md bg-slate-100 font-medium">${escapeHTML(agent.model)}</span>
+                  <span class="px-2 py-0.5 rounded-md bg-slate-100 font-medium">${escapeHTML(String(agent.latencyMs))} ms</span>
+                  ${
+                    agent.simulateError
+                      ? `<span class="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 font-semibold">Erreur simulée</span>`
+                      : ''
+                  }
+                </div>
+
+                <p class="text-xs text-slate-600 line-clamp-2 bg-slate-50 rounded-xl p-2.5 border border-slate-100">
+                  ${escapeHTML(agent.instruction)}
+                </p>
+
+                ${
+                  isRunning
+                    ? `<div class="text-xs font-medium text-indigo-700 animate-pulse-soft">Génération de la réponse en cours...</div>`
+                    : agent.status === 'error' && agent.lastError
+                    ? `<div class="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl p-2.5">${escapeHTML(agent.lastError)}</div>`
+                    : agent.lastOutput
+                    ? `<div class="text-xs text-slate-700 bg-emerald-50/50 border border-emerald-200/70 rounded-xl p-2.5 line-clamp-3"><span class="font-semibold text-emerald-800">Dernier résultat :</span> ${escapeHTML(agent.lastOutput)}</div>`
+                    : `<div class="text-xs text-slate-400 italic">En attente d'exécution manuelle.</div>`
+                }
+              </div>
+
+              <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                <span class="text-[11px] text-slate-400">
+                  ${agent.lastRunAt ? `MAJ : ${escapeHTML(formatTimestamp(agent.lastRunAt))}` : 'Jamais exécuté'}
+                </span>
+
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    data-inspect-agent="${escapeHTML(agent.id)}"
+                    class="px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition cursor-pointer"
+                  >
+                    Inspecter / Éditer
+                  </button>
+                  <button
+                    type="button"
+                    data-run-agent="${escapeHTML(agent.id)}"
+                    ${isRunning || state.isRefreshingAll ? 'disabled' : ''}
+                    class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white text-xs font-semibold transition cursor-pointer"
+                  >
+                    Exécuter
+                  </button>
+                </div>
+              </div>
+            </article>
+          `;
+        })
+        .join('');
+    }
+
+    function renderActivityFeed() {
+      const feed = document.getElementById('activity-feed');
+      if (!feed) return;
+
+      const filteredLogs =
+        state.logFilterAgentId === 'ALL'
+          ? state.logs
+          : state.logs.filter((l) => l.agentId === state.logFilterAgentId);
+
+      if (filteredLogs.length === 0) {
+        feed.innerHTML = `
+          <div class="text-center py-12 px-4 border border-dashed border-slate-200 rounded-xl bg-slate-50/70">
+            <p class="text-sm font-semibold text-slate-700">Aucun résultat dans le journal pour ce filtre</p>
+            <p class="text-xs text-slate-500 mt-1">
+              Cliquez sur <strong>« Tout actualiser »</strong> ou sur <strong>« Exécuter »</strong> sur un agent IA pour générer une entrée.
+            </p>
+          </div>
+        `;
+        return;
       }
-    }
 
-    function renderAll() {
-      renderKPIs();
-      renderSVGChart();
-      renderChecklist();
-      renderApplications();
+      feed.innerHTML = filteredLogs
+        .map((log) => {
+          const isErr = log.status === 'error';
+          return `
+            <div class="p-3.5 rounded-xl border ${isErr ? 'border-rose-200 bg-rose-50/50' : 'border-slate-200 bg-slate-50/60'} space-y-1.5">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full ${isErr ? 'bg-rose-600' : 'bg-emerald-500'}"></span>
+                  <span class="text-xs sm:text-sm font-bold text-slate-900">${escapeHTML(log.agentName)}</span>
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-white border border-slate-200 text-slate-600">
+                    via ${escapeHTML(log.triggerSource)}
+                  </span>
+                </div>
+                <span class="text-[11px] text-slate-500 font-medium">
+                  ${escapeHTML(formatTimestamp(log.timestamp))} • ${escapeHTML(String(log.durationMs))} ms
+                </span>
+              </div>
+              <p class="text-xs ${isErr ? 'text-rose-800 font-medium' : 'text-slate-700'} leading-relaxed">
+                ${escapeHTML(log.message)}
+              </p>
+            </div>
+          `;
+        })
+        .join('');
     }
 
     // =========================================================================
-    // MUTATIONS & ACTIONS UTILISATEUR
+    // MODALE D'INSPECTION / CRÉATION / PERSONNALISATION D'AGENT IA
     // =========================================================================
-    function updateItemStatus(id, newStatus) {
-      if (!STATUSES.includes(newStatus)) return;
-      const target = state.items.find((i) => i.id === id);
-      if (!target || target.statut === newStatus) return;
-
-      target.statut = newStatus;
-      saveState();
-      renderAll();
-      showToast(`Statut mis à jour : ${newStatus}`, 'success');
-    }
-
-    function deleteItem(id) {
-      const existing = state.items.find((i) => i.id === id);
-      if (!existing) return;
-
-      state.items = state.items.filter((i) => i.id !== id);
-      saveState();
-      renderAll();
-      showToast(`« ${existing.poste} » supprimé du suivi.`, 'info');
-    }
-
-    function openModal(itemToEdit = null) {
-      const backdrop = document.getElementById('modal-backdrop');
-      const titleEl = document.getElementById('modal-title');
-      const form = document.getElementById('form-application');
+    function openAgentModal(agentId = null) {
+      const backdrop = document.getElementById('agent-modal-backdrop');
+      const titleEl = document.getElementById('agent-modal-title');
+      const subtitleEl = document.getElementById('agent-modal-subtitle');
+      const deleteBtn = document.getElementById('btn-delete-agent');
+      const form = document.getElementById('form-agent-editor');
       form.reset();
 
-      if (itemToEdit) {
-        titleEl.textContent = 'Modifier l’offre / candidature';
-        document.getElementById('app-id').value = itemToEdit.id;
-        document.getElementById('app-poste').value = itemToEdit.poste || '';
-        document.getElementById('app-entreprise').value = itemToEdit.entreprise || '';
-        document.getElementById('app-portail').value = itemToEdit.portail || 'Adzuna';
-        document.getElementById('app-statut').value = itemToEdit.statut || 'À publier / Brouillon';
-        document.getElementById('app-date').value = itemToEdit.date || new Date().toISOString().slice(0, 10);
-        document.getElementById('app-lieu').value = itemToEdit.lieu || '';
-        document.getElementById('app-remuneration').value = itemToEdit.remuneration || '';
-        document.getElementById('app-ref').value = itemToEdit.ref || '';
-        document.getElementById('app-lien').value = itemToEdit.lien || '';
-        document.getElementById('app-notes').value = itemToEdit.notes || '';
+      if (agentId) {
+        const agent = state.agents.find((a) => a.id === agentId);
+        if (!agent) return;
+
+        titleEl.textContent = `Inspecter & Personnaliser — ${agent.name}`;
+        subtitleEl.textContent = 'Modifiez le prompt, le contexte ou les options d’exécution de cet agent IA';
+        deleteBtn.classList.remove('hidden');
+
+        document.getElementById('edit-agent-id').value = agent.id;
+        document.getElementById('edit-agent-name').value = agent.name;
+        document.getElementById('edit-agent-role').value = agent.role;
+        document.getElementById('edit-agent-model').value = agent.model;
+        document.getElementById('edit-agent-latency').value = String(agent.latencyMs || 900);
+        document.getElementById('edit-agent-simulate-error').value = String(Boolean(agent.simulateError));
+        document.getElementById('edit-agent-instruction').value = agent.instruction;
+        document.getElementById('edit-agent-context').value = agent.context || '';
       } else {
-        titleEl.textContent = 'Ajouter une offre / candidature';
-        document.getElementById('app-id').value = '';
-        document.getElementById('app-date').value = new Date().toISOString().slice(0, 10);
+        titleEl.textContent = 'Ajouter un nouvel Agent IA';
+        subtitleEl.textContent = 'Créez un agent personnalisé qui sera inclus lors du clic sur « Tout actualiser »';
+        deleteBtn.classList.add('hidden');
+
+        document.getElementById('edit-agent-id').value = '';
+        document.getElementById('edit-agent-model').value = 'gemini-3-flash-preview (Rapide)';
+        document.getElementById('edit-agent-latency').value = '950';
+        document.getElementById('edit-agent-simulate-error').value = 'false';
       }
 
       backdrop.classList.remove('hidden');
       backdrop.classList.add('flex');
-      document.getElementById('app-poste').focus();
+      document.getElementById('edit-agent-name').focus();
     }
 
-    function closeModal() {
-      const backdrop = document.getElementById('modal-backdrop');
+    function closeAgentModal() {
+      const backdrop = document.getElementById('agent-modal-backdrop');
       backdrop.classList.add('hidden');
       backdrop.classList.remove('flex');
     }
 
-    function exportCSV() {
-      const rows = getFilteredItems();
-      if (rows.length === 0) {
-        showToast('Aucune ligne à exporter avec les filtres actifs.', 'error');
-        return;
-      }
-
-      const headers = ['ID', 'Reference', 'Poste', 'Entreprise', 'Portail', 'Lieu', 'Remuneration', 'Statut', 'Date', 'Lien', 'Notes'];
-      const escapeCsv = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
-
-      const csvLines = [
-        headers.map(escapeCsv).join(';'),
-        ...rows.map((r) =>
-          [
-            r.id,
-            r.ref,
-            r.poste,
-            r.entreprise,
-            r.portail,
-            r.lieu,
-            r.remuneration,
-            r.statut,
-            r.date,
-            r.lien,
-            r.notes
-          ]
-            .map(escapeCsv)
-            .join(';')
-        )
-      ];
-
-      const blob = new Blob(['\uFEFF' + csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `suivi-candidatures-adzuna-${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-      showToast(`Export CSV généré (${rows.length} ligne(s)).`, 'success');
-    }
-
-    function exportJSON() {
-      const payload = {
-        exportedAt: new Date().toISOString(),
-        items: state.items,
-        checklist: state.checklist
-      };
-      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `cockpit-adzuna-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-      showToast('Sauvegarde JSON téléchargée.', 'success');
-    }
-
     // =========================================================================
-    // INITIALISATION DES ÉVÉNEMENTS
+    // ÉVÉNEMENTS
     // =========================================================================
     function bindEvents() {
-      // Ouverture / Fermeture modale
-      document.getElementById('btn-open-add-modal').addEventListener('click', () => openModal(null));
-      document.getElementById('btn-close-modal').addEventListener('click', closeModal);
-      document.getElementById('btn-cancel-modal').addEventListener('click', closeModal);
+      // Bouton principal "Tout actualiser" (uniquement au clic)
+      document.getElementById('btn-refresh-all').addEventListener('click', refreshAllAgents);
 
-      document.getElementById('modal-backdrop').addEventListener('click', (e) => {
-        if (e.target.id === 'modal-backdrop') closeModal();
+      // Création d'un nouvel agent IA
+      document.getElementById('btn-open-create-agent').addEventListener('click', () => openAgentModal(null));
+      document.getElementById('btn-close-agent-modal').addEventListener('click', closeAgentModal);
+      document.getElementById('btn-cancel-agent-modal').addEventListener('click', closeAgentModal);
+
+      document.getElementById('agent-modal-backdrop').addEventListener('click', (e) => {
+        if (e.target.id === 'agent-modal-backdrop') closeAgentModal();
       });
 
       document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeModal();
+        if (e.key === 'Escape') closeAgentModal();
       });
 
-      // Soumission formulaire ajout / édition
-      document.getElementById('form-application').addEventListener('submit', (e) => {
+      // Sauvegarde édition / création agent IA
+      document.getElementById('form-agent-editor').addEventListener('submit', (e) => {
         e.preventDefault();
-        const existingId = document.getElementById('app-id').value.trim();
-        const record = {
-          id: existingId || `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          poste: document.getElementById('app-poste').value.trim(),
-          entreprise: document.getElementById('app-entreprise').value.trim(),
-          portail: document.getElementById('app-portail').value,
-          statut: document.getElementById('app-statut').value,
-          date: document.getElementById('app-date').value,
-          lieu: document.getElementById('app-lieu').value.trim(),
-          remuneration: document.getElementById('app-remuneration').value.trim(),
-          ref: document.getElementById('app-ref').value.trim(),
-          lien: document.getElementById('app-lien').value.trim(),
-          notes: document.getElementById('app-notes').value.trim()
-        };
+        const id = document.getElementById('edit-agent-id').value.trim();
+        const name = document.getElementById('edit-agent-name').value.trim();
+        const role = document.getElementById('edit-agent-role').value.trim();
+        const model = document.getElementById('edit-agent-model').value;
+        const latencyMs = Math.max(250, Math.min(6000, Number(document.getElementById('edit-agent-latency').value) || 900));
+        const simulateError = document.getElementById('edit-agent-simulate-error').value === 'true';
+        const instruction = document.getElementById('edit-agent-instruction').value.trim();
+        const context = document.getElementById('edit-agent-context').value.trim();
 
-        if (!record.poste || !record.entreprise) {
-          showToast('Veuillez renseigner au minimum le poste et l’entreprise.', 'error');
+        if (!name || !role || !instruction) {
+          showToast('Veuillez renseigner le nom, le rôle et l’instruction de l’agent.', 'error');
           return;
         }
 
-        if (existingId) {
-          const idx = state.items.findIndex((i) => i.id === existingId);
-          if (idx !== -1) state.items[idx] = record;
-          showToast('Offre / candidature mise à jour.', 'success');
+        if (id) {
+          const existing = state.agents.find((a) => a.id === id);
+          if (existing) {
+            existing.name = name;
+            existing.role = role;
+            existing.model = model;
+            existing.latencyMs = latencyMs;
+            existing.simulateError = simulateError;
+            existing.instruction = instruction;
+            existing.context = context;
+            if (existing.status === 'error' && !simulateError) {
+              existing.status = 'idle';
+              existing.lastError = '';
+            }
+          }
+          showToast(`Agent « ${name} » mis à jour.`, 'success');
         } else {
-          state.items.unshift(record);
-          showToast('Nouvelle offre / candidature ajoutée.', 'success');
+          state.agents.push({
+            id: `agent-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            name,
+            role,
+            model,
+            instruction,
+            context,
+            latencyMs,
+            simulateError,
+            status: 'idle',
+            lastRunAt: null,
+            lastError: '',
+            lastOutput: ''
+          });
+          showToast(`Nouvel agent « ${name} » ajouté.`, 'success');
         }
 
-        saveState();
-        closeModal();
-        renderAll();
+        saveConfigToStorage();
+        closeAgentModal();
+        renderStats();
+        renderLogFilterOptions();
+        renderAgentsGrid();
       });
 
-      // Délégation des actions sur Tableau & Kanban (changement statut, éditer, supprimer)
-      const handleListAction = (e) => {
-        const statusSelect = e.target.closest('[data-status-select]');
-        if (statusSelect && e.type === 'change') {
-          updateItemStatus(statusSelect.dataset.statusSelect, statusSelect.value);
+      // Suppression d'un agent dans la modale
+      document.getElementById('btn-delete-agent').addEventListener('click', () => {
+        const id = document.getElementById('edit-agent-id').value.trim();
+        if (!id) return;
+        const target = state.agents.find((a) => a.id === id);
+        state.agents = state.agents.filter((a) => a.id !== id);
+        if (state.logFilterAgentId === id) {
+          state.logFilterAgentId = 'ALL';
+        }
+        saveConfigToStorage();
+        closeAgentModal();
+        renderStats();
+        renderLogFilterOptions();
+        renderAgentsGrid();
+        renderActivityFeed();
+        showToast(`Agent « ${target ? target.name : 'sélectionné'} » supprimé.`, 'info');
+      });
+
+      // Actions sur les cartes des agents (Inspecter ou Exécuter individuellement au clic)
+      document.getElementById('agents-grid').addEventListener('click', async (e) => {
+        const inspectBtn = e.target.closest('[data-inspect-agent]');
+        if (inspectBtn) {
+          openAgentModal(inspectBtn.dataset.inspectAgent);
           return;
         }
 
-        const editBtn = e.target.closest('[data-edit-id]');
-        if (editBtn && e.type === 'click') {
-          const found = state.items.find((i) => i.id === editBtn.dataset.editId);
-          if (found) openModal(found);
-          return;
-        }
-
-        const delBtn = e.target.closest('[data-delete-id]');
-        if (delBtn && e.type === 'click') {
-          deleteItem(delBtn.dataset.deleteId);
-        }
-      };
-
-      const tbody = document.getElementById('applications-tbody');
-      const kanbanBoard = document.getElementById('kanban-board');
-      tbody.addEventListener('change', handleListAction);
-      tbody.addEventListener('click', handleListAction);
-      kanbanBoard.addEventListener('change', handleListAction);
-      kanbanBoard.addEventListener('click', handleListAction);
-
-      // Checklist : cocher / supprimer / ajouter
-      const checklistEl = document.getElementById('checklist-items');
-      checklistEl.addEventListener('change', (e) => {
-        const cb = e.target.closest('[data-checklist-toggle]');
-        if (!cb) return;
-        const step = state.checklist.find((c) => c.id === cb.dataset.checklistToggle);
-        if (step) {
-          step.done = cb.checked;
-          saveState();
-          renderKPIs();
-          renderChecklist();
+        const runBtn = e.target.closest('[data-run-agent]');
+        if (runBtn && !state.isRefreshingAll) {
+          const agentId = runBtn.dataset.runAgent;
+          await runSingleAgent(agentId, 'Exécution unitaire');
+          state.globalLastRefresh = new Date().toISOString();
+          saveConfigToStorage();
+          renderStats();
         }
       });
 
-      checklistEl.addEventListener('click', (e) => {
-        const delBtn = e.target.closest('[data-checklist-delete]');
-        if (!delBtn) return;
-        state.checklist = state.checklist.filter((c) => c.id !== delBtn.dataset.checklistDelete);
-        saveState();
-        renderKPIs();
-        renderChecklist();
-        showToast('Étape retirée de la checklist.', 'info');
+      // Restaurer les agents par défaut (sans exécution automatique)
+      document.getElementById('btn-reset-agents-config').addEventListener('click', () => {
+        state.agents = structuredClone(DEFAULT_AGENTS);
+        state.globalLastRefresh = null;
+        state.logFilterAgentId = 'ALL';
+        saveConfigToStorage();
+        renderStats();
+        renderLogFilterOptions();
+        renderAgentsGrid();
+        renderActivityFeed();
+        showToast('Agents IA par défaut restaurés (en attente de clic).', 'info');
       });
 
-      document.getElementById('form-add-checklist').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const input = document.getElementById('new-checklist-title');
-        const tagSelect = document.getElementById('new-checklist-tag');
-        const title = input.value.trim();
-        if (!title) return;
-
-        state.checklist.push({
-          id: `chk-${Date.now()}`,
-          title,
-          tag: tagSelect.value || 'Adzuna',
-          done: false
-        });
-        input.value = '';
-        saveState();
-        renderKPIs();
-        renderChecklist();
-        showToast('Nouvelle étape ajoutée au lancement.', 'success');
+      // Filtre et effacement du journal
+      document.getElementById('log-agent-filter').addEventListener('change', (e) => {
+        state.logFilterAgentId = e.target.value;
+        renderActivityFeed();
       });
 
-      // Bascule vue Tableau / Kanban
-      document.getElementById('btn-view-table').addEventListener('click', () => {
-        state.viewMode = 'table';
-        saveState();
-        renderApplications();
-      });
-
-      document.getElementById('btn-view-kanban').addEventListener('click', () => {
-        state.viewMode = 'kanban';
-        saveState();
-        renderApplications();
-      });
-
-      // Bascule mode graphique SVG (Statut / Portail)
-      document.getElementById('chart-mode-statut').addEventListener('click', () => {
-        state.chartMode = 'statut';
-        document.getElementById('chart-mode-statut').className = 'px-3 py-1.5 rounded-lg bg-white text-slate-900 shadow-2xs transition cursor-pointer';
-        document.getElementById('chart-mode-portail').className = 'px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition cursor-pointer';
-        renderSVGChart();
-      });
-
-      document.getElementById('chart-mode-portail').addEventListener('click', () => {
-        state.chartMode = 'portail';
-        document.getElementById('chart-mode-portail').className = 'px-3 py-1.5 rounded-lg bg-white text-slate-900 shadow-2xs transition cursor-pointer';
-        document.getElementById('chart-mode-statut').className = 'px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition cursor-pointer';
-        renderSVGChart();
-      });
-
-      document.getElementById('btn-clear-chart-filter').addEventListener('click', () => {
-        state.filters.status = 'ALL';
-        state.filters.portal = 'ALL';
-        document.getElementById('filter-status').value = 'ALL';
-        document.getElementById('filter-portal').value = 'ALL';
-        renderAll();
-      });
-
-      // Filtres
-      document.getElementById('filter-search').addEventListener('input', (e) => {
-        state.filters.search = e.target.value;
-        renderApplications();
-      });
-
-      document.getElementById('filter-status').addEventListener('change', (e) => {
-        state.filters.status = e.target.value;
-        renderSVGChart();
-        renderApplications();
-      });
-
-      document.getElementById('filter-portal').addEventListener('change', (e) => {
-        state.filters.portal = e.target.value;
-        renderSVGChart();
-        renderApplications();
-      });
-
-      document.getElementById('btn-reset-filters').addEventListener('click', () => {
-        state.filters = { search: '', status: 'ALL', portal: 'ALL' };
-        document.getElementById('filter-search').value = '';
-        document.getElementById('filter-status').value = 'ALL';
-        document.getElementById('filter-portal').value = 'ALL';
-        renderAll();
-      });
-
-      // Export & Réinitialisation
-      document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
-      document.getElementById('btn-export-json').addEventListener('click', exportJSON);
-
-      document.getElementById('btn-reset-demo').addEventListener('click', () => {
-        state.items = structuredClone(DEFAULT_ITEMS);
-        state.checklist = structuredClone(DEFAULT_CHECKLIST);
-        state.filters = { search: '', status: 'ALL', portal: 'ALL' };
-        document.getElementById('filter-search').value = '';
-        document.getElementById('filter-status').value = 'ALL';
-        document.getElementById('filter-portal').value = 'ALL';
-        saveState();
-        renderAll();
-        showToast('Données de démonstration restaurées.', 'success');
+      document.getElementById('btn-clear-logs').addEventListener('click', () => {
+        state.logs = [];
+        renderActivityFeed();
+        showToast('Journal d’activité effacé.', 'info');
       });
     }
 
+    // Initialisation passive : aucune actualisation des agents n'est lancée au chargement
     document.addEventListener('DOMContentLoaded', () => {
-      loadState();
+      loadConfigFromStorage();
       bindEvents();
-      renderAll();
+      renderStats();
+      renderLogFilterOptions();
+      renderAgentsGrid();
+      renderActivityFeed();
     });
   </script>
 </body>
