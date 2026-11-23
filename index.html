@@ -3,25 +3,65 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Intranet — Test Ajout Candidature</title>
+  <title>Intranet — Candidatures & Recherche Adzuna</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 680px; margin: 40px auto; padding: 0 16px; background: #f6f8fa; }
+    body { font-family: Arial, sans-serif; max-width: 820px; margin: 32px auto; padding: 0 16px; background: #f6f8fa; color: #111827; }
+    h1 { margin-bottom: 20px; }
+    h2 { margin-top: 0; font-size: 1.15rem; }
     .card { background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px; }
     label { display: block; font-weight: bold; margin-top: 12px; margin-bottom: 4px; }
     input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-    button { margin-top: 16px; padding: 10px 16px; background: #0f766e; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    button { margin-top: 12px; padding: 9px 14px; background: #0f766e; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
     button:hover { background: #115e59; }
-    #message { margin-top: 12px; padding: 10px; border-radius: 4px; display: none; white-space: pre-wrap; }
+    button.secondary { background: #2563eb; }
+    button.secondary:hover { background: #1d4ed8; }
+    button.small { margin-top: 8px; padding: 6px 10px; font-size: 0.9rem; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .row > div { flex: 1 1 200px; }
+    #message, #adzuna-status { margin-top: 12px; padding: 10px; border-radius: 4px; display: none; white-space: pre-wrap; }
     .ok { background: #dcfce7; color: #166534; display: block !important; }
     .err { background: #fee2e2; color: #991b1b; display: block !important; }
-    .item { padding: 10px; border-bottom: 1px solid #eee; }
+    .info { background: #e0f2fe; color: #075985; display: block !important; }
+    .item, .offre { padding: 12px; border-bottom: 1px solid #eee; }
+    .item:last-child, .offre:last-child { border-bottom: none; }
+    .offre-titre { font-weight: bold; font-size: 1rem; }
+    .offre-meta { color: #4b5563; font-size: 0.9rem; margin-top: 4px; }
+    .offre-desc { color: #374151; font-size: 0.88rem; margin-top: 6px; }
+    a { color: #0f766e; }
   </style>
 </head>
 <body>
-  <h1>Suivi des candidatures — Test d'ajout</h1>
+  <h1>Intranet — Suivi Candidatures & Veille Adzuna</h1>
 
+  <!-- BLOC 1 : RECHERCHE ADZUNA -->
   <div class="card">
+    <h2>1. Rechercher des offres via Adzuna</h2>
+    <form id="form-adzuna">
+      <div class="row">
+        <div>
+          <label for="adzuna-query">Mots-clés *</label>
+          <input id="adzuna-query" type="text" required value="responsable commercial b2b" placeholder="Ex. responsable commercial, traitement eau..." />
+        </div>
+        <div>
+          <label for="adzuna-country">Pays</label>
+          <select id="adzuna-country">
+            <option value="fr" selected>France (FR)</option>
+            <option value="es">Espagne (ES)</option>
+            <option value="be">Belgique (BE)</option>
+            <option value="ch">Suisse (CH)</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="secondary">Rechercher sur Adzuna</button>
+    </form>
+    <div id="adzuna-status"></div>
+    <div id="resultats-adzuna" style="margin-top: 14px;"></div>
+  </div>
+
+  <!-- BLOC 2 : AJOUT MANUEL DE CANDIDATURE -->
+  <div class="card">
+    <h2>2. Ajouter une candidature manuellement</h2>
     <form id="form-candidature">
       <label for="poste">Intitulé du poste *</label>
       <input id="poste" type="text" required placeholder="Ex. Responsable Commercial B2B" />
@@ -51,8 +91,9 @@
     <div id="message"></div>
   </div>
 
+  <!-- BLOC 3 : LISTE SUPABASE -->
   <div class="card">
-    <h2>Dernières candidatures enregistrées</h2>
+    <h2>3. Dernières candidatures enregistrées</h2>
     <div id="liste">Chargement...</div>
   </div>
 
@@ -61,12 +102,22 @@
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_7Lbz8CO9IoUng0DOejAY5Q_aFM-3mvh";
 
     const msgBox = document.getElementById("message");
+    const adzunaStatus = document.getElementById("adzuna-status");
+    const resultatsAdzunaEl = document.getElementById("resultats-adzuna");
     const listeEl = document.getElementById("liste");
     const form = document.getElementById("form-candidature");
+    const formAdzuna = document.getElementById("form-adzuna");
+
+    let dernieresOffresAdzuna = [];
 
     function afficherMessage(texte, estErreur = false) {
       msgBox.textContent = texte;
       msgBox.className = estErreur ? "err" : "ok";
+    }
+
+    function afficherStatutAdzuna(texte, type = "info") {
+      adzunaStatus.textContent = texte;
+      adzunaStatus.className = type;
     }
 
     if (!window.supabase || !window.supabase.createClient) {
@@ -81,7 +132,7 @@
           .from("candidatures")
           .select("*")
           .order("created_at", { ascending: false })
-          .limit(10);
+          .limit(15);
 
         if (error) {
           listeEl.innerHTML = `<p style="color:#991b1b;">Erreur lecture : ${error.message}</p>`;
@@ -96,7 +147,8 @@
         listeEl.innerHTML = data.map(row => `
           <div class="item">
             <strong>${row.poste || "(Sans poste)"}</strong> — ${row.entreprise || "(Sans entreprise)"}<br>
-            <small>Statut : ${row.statut || "-"} | ${row.localisation || ""}</small>
+            <small>Statut : ${row.statut || "-"} | ${row.localisation || ""} | Source : ${row.source || "manuel"}</small>
+            ${row.lien_offre ? `<br><small><a href="${row.lien_offre}" target="_blank" rel="noopener noreferrer">Voir l'offre</a></small>` : ""}
           </div>
         `).join("");
       } catch (err) {
@@ -104,12 +156,23 @@
       }
     }
 
+    async function insererCandidature(payload) {
+      const { error } = await supabaseClient
+        .from("candidatures")
+        .insert([payload]);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+      await chargerCandidatures();
+    }
+
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       afficherMessage("Enregistrement en cours...", false);
 
       try {
-        const nouvelleCandidature = {
+        await insererCandidature({
           poste: document.getElementById("poste").value.trim(),
           entreprise: document.getElementById("entreprise").value.trim(),
           localisation: document.getElementById("localisation").value.trim() || null,
@@ -117,22 +180,77 @@
           statut: document.getElementById("statut").value,
           notes: document.getElementById("notes").value.trim() || null,
           source: "manuel"
-        };
-
-        const { error } = await supabaseClient
-          .from("candidatures")
-          .insert([nouvelleCandidature]);
-
-        if (error) {
-          afficherMessage("Erreur d'enregistrement : " + error.message, true);
-          return;
-        }
+        });
 
         afficherMessage("Candidature enregistrée avec succès !", false);
         form.reset();
-        await chargerCandidatures();
       } catch (err) {
-        afficherMessage("Erreur technique : " + (err.message || err), true);
+        afficherMessage("Erreur d'enregistrement : " + (err.message || err), true);
+      }
+    });
+
+    function rendreOffresAdzuna(offres) {
+      if (!offres || offres.length === 0) {
+        resultatsAdzunaEl.innerHTML = "<p>Aucune offre trouvée pour ces critères.</p>";
+        return;
+      }
+
+      resultatsAdzunaEl.innerHTML = offres.map((offre, index) => `
+        <div class="offre">
+          <div class="offre-titre">${offre.poste}</div>
+          <div class="offre-meta">${offre.entreprise} — ${offre.localisation}</div>
+          ${offre.description ? `<div class="offre-desc">${offre.description.slice(0, 240)}...</div>` : ""}
+          <div style="margin-top: 8px;">
+            ${offre.lien_offre ? `<a href="${offre.lien_offre}" target="_blank" rel="noopener noreferrer">Ouvrir l'annonce</a>` : ""}
+            <button type="button" class="small" onclick="ajouterOffreAdzuna(${index})">Ajouter aux candidatures</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    window.ajouterOffreAdzuna = async function(index) {
+      const offre = dernieresOffresAdzuna[index];
+      if (!offre) return;
+
+      try {
+        afficherStatutAdzuna("Ajout en cours dans Supabase...", "info");
+        await insererCandidature({
+          poste: offre.poste,
+          entreprise: offre.entreprise,
+          localisation: offre.localisation || null,
+          lien_offre: offre.lien_offre || null,
+          statut: "a_postuler",
+          notes: offre.description ? offre.description.slice(0, 1000) : null,
+          source: "adzuna"
+        });
+        afficherStatutAdzuna(`Offre ajoutée : "${offre.poste}" (${offre.entreprise}).`, "ok");
+      } catch (err) {
+        afficherStatutAdzuna("Erreur ajout Adzuna : " + (err.message || err), "err");
+      }
+    };
+
+    formAdzuna.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const q = document.getElementById("adzuna-query").value.trim();
+      const country = document.getElementById("adzuna-country").value;
+
+      afficherStatutAdzuna("Recherche en cours sur Adzuna...", "info");
+      resultatsAdzunaEl.innerHTML = "";
+
+      try {
+        const res = await fetch(`/api/adzuna?q=${encodeURIComponent(q)}&country=${encodeURIComponent(country)}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          afficherStatutAdzuna("Erreur Adzuna : " + (data.error || res.status), "err");
+          return;
+        }
+
+        dernieresOffresAdzuna = data.offres || [];
+        afficherStatutAdzuna(`${dernieresOffresAdzuna.length} offre(s) récupérée(s).`, "ok");
+        rendreOffresAdzuna(dernieresOffresAdzuna);
+      } catch (err) {
+        afficherStatutAdzuna("Erreur réseau Adzuna : " + (err.message || err), "err");
       }
     });
 
