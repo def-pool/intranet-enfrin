@@ -3,155 +3,455 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Intranet — Candidatures, Adzuna & Filtres</title>
+  <title>Cockpit Emploi B2B — Veille, Matching & Relances</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 900px; margin: 32px auto; padding: 0 16px; background: #f6f8fa; color: #111827; }
-    h1 { margin-bottom: 20px; }
+    :root {
+      --primary: #0f766e;
+      --primary-dark: #115e59;
+      --blue: #2563eb;
+      --purple: #7c3aed;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    header h1 { margin: 0; font-size: 1.5rem; color: #0f172a; }
+    header p { margin: 4px 0 0; color: var(--muted); font-size: 0.92rem; }
+
+    /* KPI CARDS */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .kpi {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .kpi-label { font-size: 0.82rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+    .kpi-val { font-size: 1.75rem; font-weight: 800; margin-top: 6px; color: var(--text); }
+    .kpi-sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+
+    /* TABS */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 10px;
+    }
+    .tab-btn {
+      background: #fff;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.92rem;
+      margin: 0;
+      transition: all 0.15s;
+    }
+    .tab-btn:hover { background: #f8fafc; }
+    .tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* CARDS & FORMS */
+    .card {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      margin-bottom: 18px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
     h2 { margin-top: 0; font-size: 1.15rem; }
-    .card { background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px; }
-    label { display: block; font-weight: bold; margin-top: 12px; margin-bottom: 4px; }
-    input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-    button { margin-top: 12px; padding: 9px 14px; background: #0f766e; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-    button:hover { background: #115e59; }
-    button.secondary { background: #2563eb; }
+    label { display: block; font-weight: 600; font-size: 0.88rem; margin-top: 12px; margin-bottom: 4px; color: #334155; }
+    input, select, textarea {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.94rem;
+      background: #fff;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); }
+    button {
+      margin-top: 12px;
+      padding: 9px 15px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.92rem;
+    }
+    button:hover { background: var(--primary-dark); }
+    button.secondary { background: var(--blue); }
     button.secondary:hover { background: #1d4ed8; }
-    button.qualif { background: #7c3aed; }
+    button.qualif { background: var(--purple); }
     button.qualif:hover { background: #6d28d9; }
     button.copy-btn { background: #475569; }
     button.copy-btn:hover { background: #334155; }
-    button.small { margin-top: 8px; margin-right: 8px; padding: 6px 10px; font-size: 0.9rem; }
+    button.danger { background: #dc2626; }
+    button.danger:hover { background: #b91c1c; }
+    button.small { margin-top: 6px; margin-right: 6px; padding: 6px 11px; font-size: 0.85rem; }
+
     .row { display: flex; gap: 12px; flex-wrap: wrap; }
     .row > div { flex: 1 1 200px; }
-    .filtres-bar { margin-top: 14px; padding: 12px; background: #f1f5f9; border-radius: 6px; border: 1px solid #cbd5e1; }
-    #message, #adzuna-status { margin-top: 12px; padding: 10px; border-radius: 4px; display: none; white-space: pre-wrap; }
+
+    /* HUB SOURCES */
+    .hub-box {
+      margin-top: 14px;
+      padding: 14px;
+      background: #f8fafc;
+      border: 1px dashed #94a3b8;
+      border-radius: 10px;
+    }
+    .hub-title { font-size: 0.86rem; font-weight: 700; color: #334155; margin-bottom: 8px; }
+    .hub-links { display: flex; gap: 8px; flex-wrap: wrap; }
+    .hub-link {
+      display: inline-block;
+      padding: 6px 12px;
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      border-radius: 999px;
+      text-decoration: none;
+      color: #1e293b;
+      font-size: 0.84rem;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+    .hub-link:hover { border-color: var(--blue); color: var(--blue); background: #eff6ff; }
+
+    .filtres-bar {
+      margin-top: 14px;
+      padding: 12px;
+      background: #f8fafc;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    #message, #adzuna-status, #suivi-status {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      display: none;
+      font-size: 0.9rem;
+    }
     .ok { background: #dcfce7; color: #166534; display: block !important; }
     .err { background: #fee2e2; color: #991b1b; display: block !important; }
     .info { background: #e0f2fe; color: #075985; display: block !important; }
-    .item, .offre { padding: 14px; border-bottom: 1px solid #eee; }
-    .item:last-child, .offre:last-child { border-bottom: none; }
-    .offre-titre { font-weight: bold; font-size: 1.02rem; }
-    .offre-meta { color: #4b5563; font-size: 0.9rem; margin-top: 4px; }
-    .offre-date { color: #0f766e; font-size: 0.85rem; font-weight: bold; margin-top: 4px; }
-    .offre-desc { color: #374151; font-size: 0.88rem; margin-top: 6px; }
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.8rem; font-weight: bold; margin-left: 8px; }
-    .b-high { background: #dcfce7; color: #166534; }
-    .b-mid { background: #fef3c7; color: #92400e; }
-    .b-low { background: #f3f4f6; color: #374151; }
-    .qualif-box { margin-top: 10px; padding: 12px; background: #f9fafb; border-left: 3px solid #7c3aed; border-radius: 4px; font-size: 0.9rem; }
+
+    /* OFFRE CARD + JAUGE */
+    .offre {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 12px;
+      background: #fff;
+      transition: box-shadow 0.15s;
+    }
+    .offre:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .offre-gauge { flex: 0 0 112px; text-align: center; }
+    .offre-body { flex: 1 1 auto; min-width: 0; }
+    .offre-titre { font-weight: 700; font-size: 1.05rem; color: #0f172a; }
+    .offre-meta { color: #475569; font-size: 0.9rem; margin-top: 3px; }
+    .offre-date { color: var(--primary); font-size: 0.84rem; font-weight: 600; margin-top: 4px; }
+    .offre-desc { color: #334155; font-size: 0.88rem; margin-top: 6px; line-height: 1.45; }
+
+    .qualif-box {
+      margin-top: 12px;
+      padding: 12px;
+      background: #f8fafc;
+      border-left: 4px solid var(--purple);
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
     .lang-bar { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
-    .lang-bar label { margin: 0; font-size: 0.88rem; }
-    .lang-bar select { width: auto; padding: 5px 8px; font-size: 0.88rem; }
+    .lang-bar label { margin: 0; font-size: 0.85rem; }
+    .lang-bar select { width: auto; padding: 5px 8px; font-size: 0.85rem; }
     textarea.msg-out { margin-top: 8px; font-size: 0.88rem; background: #fff; }
-    a { color: #0f766e; }
+
+    /* PIPELINE & RELANCES */
+    .cand-item {
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 12px;
+      background: #fff;
+    }
+    .cand-item.relance-due {
+      border-left: 5px solid #f59e0b;
+      background: #fffbeb;
+    }
+    .cand-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .pill-green { background: #dcfce7; color: #166534; }
+    .pill-amber { background: #fef3c7; color: #92400e; }
+    .pill-red { background: #fee2e2; color: #991b1b; }
+    .pill-gray { background: #f1f5f9; color: #475569; }
+    a { color: var(--primary); font-weight: 600; }
+
+    @media (max-width: 620px) {
+      .offre { flex-direction: column; }
+      .offre-gauge { flex: none; }
+    }
   </style>
 </head>
 <body>
-  <h1>Intranet — Candidatures, Adzuna & Filtres</h1>
 
-  <!-- BLOC 1 : RECHERCHE ADZUNA -->
-  <div class="card">
-    <h2>1. Rechercher, filtrer et qualifier des offres via Adzuna</h2>
-    <form id="form-adzuna">
-      <div class="row">
-        <div>
-          <label for="adzuna-query">Mots-clés *</label>
-          <input id="adzuna-query" type="text" required value="responsable commercial b2b" placeholder="Ex. responsable commercial, traitement eau..." />
-        </div>
-        <div>
-          <label for="adzuna-country">Pays</label>
-          <select id="adzuna-country">
-            <option value="fr" selected>France (FR)</option>
-            <option value="es">Espagne (ES)</option>
-            <option value="be">Belgique (BE)</option>
-            <option value="ch">Suisse (CH)</option>
-          </select>
-        </div>
-      </div>
-      <button type="submit" class="secondary">Rechercher sur Adzuna</button>
-    </form>
-
-    <!-- BARRE DE FILTRES ET TRI -->
-    <div class="filtres-bar">
-      <div class="row">
-        <div>
-          <label for="filtre-date" style="margin-top:0;">Ancienneté de mise en ligne</label>
-          <select id="filtre-date">
-            <option value="all" selected>Toutes les dates</option>
-            <option value="24h">Offres de -24 heures</option>
-            <option value="3j">Offres de -3 jours</option>
-            <option value="7j">Offres de -7 jours</option>
-            <option value="30j">Offres de -30 jours</option>
-            <option value="plus30j">Offres &gt; 30 jours</option>
-          </select>
-        </div>
-        <div>
-          <label for="tri-matching" style="margin-top:0;">Ordre du matching</label>
-          <select id="tri-matching">
-            <option value="score_asc" selected>Matching croissant (du plus faible au plus fort)</option>
-            <option value="score_desc">Matching décroissant (du plus fort au plus faible)</option>
-            <option value="date_desc">Date de publication (plus récentes d'abord)</option>
-          </select>
-        </div>
-      </div>
+  <header>
+    <div>
+      <h1>Cockpit Emploi B2B</h1>
+      <p>Veille multi-sources, jauge de matching & suivi des relances</p>
     </div>
+  </header>
 
-    <div id="adzuna-status"></div>
-    <div id="resultats-adzuna" style="margin-top: 14px;"></div>
+  <!-- COMPTEURS DE SYNTHÈSE -->
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-label">Offres trouvées</div>
+      <div class="kpi-val" id="kpi-trouvees">0</div>
+      <div class="kpi-sub">Session de veille active</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">À postuler</div>
+      <div class="kpi-val" id="kpi-apostuler">0</div>
+      <div class="kpi-sub">En attente d'envoi</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Candidatures envoyées</div>
+      <div class="kpi-val" id="kpi-postule">0</div>
+      <div class="kpi-sub">Statut « Postulé »</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Relances à prévoir</div>
+      <div class="kpi-val" id="kpi-relances" style="color:#d97706;">0</div>
+      <div class="kpi-sub">Postulées depuis ≥ 7 jours</div>
+    </div>
   </div>
 
-  <!-- BLOC 2 : AJOUT MANUEL DE CANDIDATURE -->
-  <div class="card">
-    <h2>2. Ajouter une candidature manuellement</h2>
-    <form id="form-candidature">
-      <label for="poste">Intitulé du poste *</label>
-      <input id="poste" type="text" required placeholder="Ex. Responsable Commercial B2B" />
-
-      <label for="entreprise">Entreprise *</label>
-      <input id="entreprise" type="text" required placeholder="Ex. Exemple Industrie" />
-
-      <label for="localisation">Localisation</label>
-      <input id="localisation" type="text" placeholder="Ex. France / Itinérant" />
-
-      <label for="lien_offre">Lien de l'offre</label>
-      <input id="lien_offre" type="url" placeholder="https://..." />
-
-      <label for="statut">Statut</label>
-      <select id="statut">
-        <option value="a_postuler">À postuler</option>
-        <option value="postule">Postulé</option>
-        <option value="relance">Relance</option>
-        <option value="entretien">Entretien</option>
-      </select>
-
-      <label for="notes">Description / Notes</label>
-      <textarea id="notes" rows="3" placeholder="Informations utiles, missions, secteur..."></textarea>
-
-      <button type="submit">Enregistrer dans Supabase</button>
-    </form>
-    <div id="message"></div>
+  <!-- NAVIGATION PAR ONGLETS -->
+  <div class="tabs">
+    <button type="button" class="tab-btn active" onclick="ouvrirOnglet('tab-veille', this)">1. Agent Veille & Sources</button>
+    <button type="button" class="tab-btn" onclick="ouvrirOnglet('tab-suivi', this)">2. Agent Suivi & Relances</button>
+    <button type="button" class="tab-btn" onclick="ouvrirOnglet('tab-manuel', this)">3. Capture / Ajout Manuel</button>
   </div>
 
-  <!-- BLOC 3 : LISTE SUPABASE -->
-  <div class="card">
-    <h2>3. Dernières candidatures enregistrées</h2>
-    <div id="liste">Chargement...</div>
+  <!-- ONGLET 1 : AGENT VEILLE & HUB SOURCES -->
+  <div id="tab-veille" class="tab-panel active">
+    <div class="card">
+      <h2>Recherche API Adzuna & Lancement multi-portails</h2>
+      <form id="form-adzuna">
+        <div class="row">
+          <div>
+            <label for="adzuna-query">Mots-clés de recherche *</label>
+            <input id="adzuna-query" type="text" required value="responsable commercial b2b" placeholder="Ex. responsable commercial, traitement eau, piscine..." />
+          </div>
+          <div>
+            <label for="adzuna-country">Pays cible</label>
+            <select id="adzuna-country">
+              <option value="fr" selected>France (FR)</option>
+              <option value="es">Espagne (ES)</option>
+              <option value="be">Belgique (BE)</option>
+              <option value="ch">Suisse (CH)</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="secondary">Lancer l'Agent Veille (Adzuna)</button>
+      </form>
+
+      <!-- HUB DES AUTRES SITES (LIENS PRÉ-FILTRÉS EN 1 CLIC) -->
+      <div class="hub-box">
+        <div class="hub-title">Ouvrir la même recherche en 1 clic sur les autres plateformes :</div>
+        <div class="hub-links" id="hub-links"></div>
+      </div>
+
+      <!-- FILTRES ET TRI -->
+      <div class="filtres-bar">
+        <div class="row">
+          <div>
+            <label for="filtre-date" style="margin-top:0;">Ancienneté de mise en ligne</label>
+            <select id="filtre-date">
+              <option value="all" selected>Toutes les dates</option>
+              <option value="24h">Offres de -24 heures</option>
+              <option value="3j">Offres de -3 jours</option>
+              <option value="7j">Offres de -7 jours</option>
+              <option value="30j">Offres de -30 jours</option>
+              <option value="plus30j">Offres &gt; 30 jours</option>
+            </select>
+          </div>
+          <div>
+            <label for="tri-matching" style="margin-top:0;">Ordre du matching</label>
+            <select id="tri-matching">
+              <option value="score_desc" selected>Matching décroissant (meilleurs scores d'abord)</option>
+              <option value="score_asc">Matching croissant (plus faibles d'abord)</option>
+              <option value="date_desc">Date de publication (plus récentes d'abord)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div id="adzuna-status"></div>
+      <div id="resultats-adzuna" style="margin-top: 16px;"></div>
+    </div>
+  </div>
+
+  <!-- ONGLET 2 : AGENT SUIVI & RELANCES -->
+  <div id="tab-suivi" class="tab-panel">
+    <div class="card">
+      <h2>Pilotage des candidatures & Agent Relances</h2>
+      <div class="row" style="margin-bottom: 12px;">
+        <div>
+          <label for="filtre-statut-suivi" style="margin-top:0;">Filtrer par statut</label>
+          <select id="filtre-statut-suivi">
+            <option value="all" selected>Toutes les candidatures</option>
+            <option value="relance_due">Relances prioritaires (Postulé ≥ 7 jours)</option>
+            <option value="a_postuler">À postuler</option>
+            <option value="postule">Postulé</option>
+            <option value="relance">Relancé</option>
+            <option value="entretien">Entretien</option>
+          </select>
+        </div>
+      </div>
+      <div id="suivi-status"></div>
+      <div id="liste">Chargement...</div>
+    </div>
+  </div>
+
+  <!-- ONGLET 3 : CAPTURE / AJOUT MANUEL -->
+  <div id="tab-manuel" class="tab-panel">
+    <div class="card">
+      <h2>Capturer une offre vue sur LinkedIn, France Travail, APEC...</h2>
+      <p style="color:#64748b; font-size:0.9rem; margin-top:0;">Collez les informations de l'annonce : l'Agent Qualification calculera automatiquement la jauge de matching et préparera le message d'approche.</p>
+      <form id="form-candidature">
+        <div class="row">
+          <div>
+            <label for="poste">Intitulé du poste *</label>
+            <input id="poste" type="text" required placeholder="Ex. Directeur Commercial Régional Eau / Piscine" />
+          </div>
+          <div>
+            <label for="entreprise">Entreprise *</label>
+            <input id="entreprise" type="text" required placeholder="Ex. Nom de l'entreprise" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="localisation">Localisation</label>
+            <input id="localisation" type="text" placeholder="Ex. France / Sud / Espagne" />
+          </div>
+          <div>
+            <label for="source_manuelle">Plateforme source</label>
+            <select id="source_manuelle">
+              <option value="linkedin">LinkedIn</option>
+              <option value="france_travail">France Travail</option>
+              <option value="apec">APEC</option>
+              <option value="indeed">Indeed</option>
+              <option value="infojobs">InfoJobs</option>
+              <option value="manuel">Autre / Réseau direct</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="lien_offre">Lien de l'offre</label>
+            <input id="lien_offre" type="url" placeholder="https://..." />
+          </div>
+          <div>
+            <label for="statut">Statut initial</label>
+            <select id="statut">
+              <option value="a_postuler">À postuler</option>
+              <option value="postule">Postulé</option>
+              <option value="relance">Relance</option>
+              <option value="entretien">Entretien</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="notes">Texte de l'annonce / Notes (analyse le matching)</label>
+        <textarea id="notes" rows="4" placeholder="Collez ici les missions ou mots-clés de l'offre..."></textarea>
+
+        <button type="submit">Qualifier et enregistrer dans Supabase</button>
+      </form>
+      <div id="message"></div>
+    </div>
   </div>
 
   <script>
     const SUPABASE_URL = "https://cftqeuzcddyxyrxutjwd.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_7Lbz8CO9IoUng0DOejAY5Q_aFM-3mvh";
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
     const msgBox = document.getElementById("message");
     const adzunaStatus = document.getElementById("adzuna-status");
+    const suiviStatus = document.getElementById("suivi-status");
     const resultatsAdzunaEl = document.getElementById("resultats-adzuna");
     const listeEl = document.getElementById("liste");
     const form = document.getElementById("form-candidature");
     const formAdzuna = document.getElementById("form-adzuna");
     const filtreDateEl = document.getElementById("filtre-date");
     const triMatchingEl = document.getElementById("tri-matching");
+    const filtreStatutSuiviEl = document.getElementById("filtre-statut-suivi");
+    const hubLinksEl = document.getElementById("hub-links");
 
     let dernieresOffresAdzuna = [];
+    let candidaturesCache = [];
+
+    // NAVIGATION ONGLETS
+    window.ouvrirOnglet = function(tabId, btn) {
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+      document.getElementById(tabId).classList.add("active");
+      if (btn) btn.classList.add("active");
+    };
 
     function afficherMessage(texte, estErreur = false) {
       msgBox.textContent = texte;
@@ -163,7 +463,61 @@
       adzunaStatus.className = type;
     }
 
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    function afficherStatutSuivi(texte, type = "info") {
+      suiviStatus.textContent = texte;
+      suiviStatus.className = type;
+    }
+
+    // JAUGE SVG AVEC ROUE COLORÉE ET AIGUILLE
+    function rendreJaugeSVG(score) {
+      const s = Math.max(0, Math.min(100, Number(score) || 0));
+      // Angle de -90° (gauche, 0) à +90° (droite, 100)
+      const angle = -90 + (s / 100) * 180;
+      let couleur = "#dc2626";
+      let label = "Faible";
+      if (s >= 70) { couleur = "#16a34a"; label = "Fort"; }
+      else if (s >= 50) { couleur = "#d97706"; label = "Moyen"; }
+
+      return `
+        <svg viewBox="0 0 120 75" width="110" height="70" aria-label="Score ${s} sur 100">
+          <!-- Arc Rouge (0 -> 50%) -->
+          <path d="M 12 60 A 48 48 0 0 1 60 12" fill="none" stroke="#ef4444" stroke-width="11" stroke-linecap="butt" />
+          <!-- Arc Orange (50% -> 70%) -->
+          <path d="M 60 12 A 48 48 0 0 1 88.2 21.2" fill="none" stroke="#f59e0b" stroke-width="11" stroke-linecap="butt" />
+          <!-- Arc Vert (70% -> 100%) -->
+          <path d="M 88.2 21.2 A 48 48 0 0 1 108 60" fill="none" stroke="#22c55e" stroke-width="11" stroke-linecap="butt" />
+          <!-- Aiguille pivotante -->
+          <g transform="translate(60, 60) rotate(${angle})">
+            <polygon points="-3,0 3,0 0,-40" fill="#0f172a" />
+          </g>
+          <circle cx="60" cy="60" r="5" fill="#0f172a" />
+        </svg>
+        <div style="font-weight:800; font-size:0.95rem; color:${couleur}; margin-top:-4px;">${s} / 100</div>
+        <div style="font-size:0.75rem; color:#64748b; font-weight:600;">Match ${label}</div>
+      `;
+    }
+
+    // HUB MULTI-PORTAILS (FRANCE TRAVAIL, LINKEDIN, APEC, INDEED, INFOJOBS)
+    function majHubSources() {
+      const q = encodeURIComponent(document.getElementById("adzuna-query").value.trim() || "responsable commercial");
+      const country = document.getElementById("adzuna-country").value;
+
+      const liens = [
+        { nom: "France Travail", url: `https://candidat.francetravail.fr/offres/recherche?motsCles=${q}&offresPartenaires=true` },
+        { nom: "LinkedIn Emplois", url: `https://www.linkedin.com/jobs/search/?keywords=${q}&location=${country === "es" ? "Spain" : country === "be" ? "Belgium" : country === "ch" ? "Switzerland" : "France"}` },
+        { nom: "APEC (Cadres)", url: `https://www.apec.fr/candidat/recherche-emploi.html/emploi?motsCles=${q}` },
+        { nom: "Indeed", url: `https://${country === "es" ? "es" : country === "be" ? "be" : country === "ch" ? "ch" : "fr"}.indeed.com/jobs?q=${q}` },
+        { nom: "InfoJobs (ES)", url: `https://www.infojobs.net/jobsearch/search-results/list.xhtml?keyword=${q}` }
+      ];
+
+      hubLinksEl.innerHTML = liens.map(l =>
+        `<a class="hub-link" href="${l.url}" target="_blank" rel="noopener noreferrer">${l.nom} ↗</a>`
+      ).join("");
+    }
+
+    document.getElementById("adzuna-query").addEventListener("input", majHubSources);
+    document.getElementById("adzuna-country").addEventListener("change", majHubSources);
+    majHubSources();
 
     function genererMessagesParLangue(offre) {
       return {
@@ -173,7 +527,15 @@
       };
     }
 
-    // AGENT DE QUALIFICATION NIVEAU 1
+    function genererRelancesParLangue(row) {
+      return {
+        fr: `Bonjour, je me permets de revenir vers vous suite à ma candidature pour le poste de ${row.poste} chez ${row.entreprise}. Toujours très motivé par l'opportunité de contribuer à votre développement commercial B2B, je reste à votre disposition pour un premier échange téléphonique.`,
+        es: `Hola, me pongo nuevamente en contacto tras mi candidatura para el puesto de ${row.poste} en ${row.entreprise}. Sigo muy interesado en aportar mi experiencia en desarrollo comercial B2B a su equipo y quedo a su disposición para una breve llamada.`,
+        en: `Hello, I am following up on my application for the ${row.poste} role at ${row.entreprise}. I remain very enthusiastic about supporting your B2B commercial growth and would welcome a brief call at your convenience.`
+      };
+    }
+
+    // AGENT QUALIFICATION
     function qualifierOffre(offre, pays = "fr") {
       const texte = `${offre.poste || ""} ${offre.entreprise || ""} ${offre.localisation || ""} ${offre.description || ""}`.toLowerCase();
       let score = 35;
@@ -218,12 +580,6 @@
       };
     }
 
-    function badgeScore(score) {
-      if (score >= 70) return `<span class="badge b-high">Score : ${score}/100</span>`;
-      if (score >= 50) return `<span class="badge b-mid">Score : ${score}/100</span>`;
-      return `<span class="badge b-low">Score : ${score}/100</span>`;
-    }
-
     function formaterDatePublication(dateIso) {
       if (!dateIso) return "Date de mise en ligne non précisée";
       const d = new Date(dateIso);
@@ -240,11 +596,7 @@
       else relatif = `il y a ${diffJours} jours`;
 
       const dateFormatee = d.toLocaleDateString("fr-FR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
+        day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit"
       });
 
       return `Mise en ligne : ${dateFormatee} (${relatif})`;
@@ -265,36 +617,152 @@
       return true;
     }
 
+    function joursDepuis(dateIso) {
+      if (!dateIso) return 0;
+      const d = new Date(dateIso);
+      if (isNaN(d.getTime())) return 0;
+      return Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+    }
+
+    function majKPIs() {
+      document.getElementById("kpi-trouvees").textContent = dernieresOffresAdzuna.length;
+      const aPostuler = candidaturesCache.filter(c => c.statut === "a_postuler").length;
+      const postule = candidaturesCache.filter(c => c.statut === "postule").length;
+      const relances = candidaturesCache.filter(c => c.statut === "postule" && joursDepuis(c.created_at) >= 7).length;
+
+      document.getElementById("kpi-apostuler").textContent = aPostuler;
+      document.getElementById("kpi-postule").textContent = postule;
+      document.getElementById("kpi-relances").textContent = relances;
+    }
+
+    // AGENT SUIVI & RELANCES (SUPABASE)
     async function chargerCandidatures() {
       try {
         const { data, error } = await supabaseClient
           .from("candidatures")
           .select("*")
           .order("created_at", { ascending: false })
-          .limit(15);
+          .limit(50);
 
         if (error) {
           listeEl.innerHTML = `<p style="color:#991b1b;">Erreur lecture : ${error.message}</p>`;
           return;
         }
 
-        if (!data || data.length === 0) {
-          listeEl.innerHTML = "<p>Aucune candidature enregistrée pour le moment.</p>";
-          return;
-        }
-
-        listeEl.innerHTML = data.map(row => `
-          <div class="item">
-            <strong>${row.poste || "(Sans poste)"}</strong> — ${row.entreprise || "(Sans entreprise)"}
-            ${typeof row.score_match === "number" ? badgeScore(row.score_match) : ""}<br>
-            <small>Statut : ${row.statut || "-"} | ${row.localisation || ""} | Source : ${row.source || "manuel"}</small>
-            ${row.lien_offre ? `<br><small><a href="${row.lien_offre}" target="_blank" rel="noopener noreferrer">Voir l'offre</a></small>` : ""}
-          </div>
-        `).join("");
+        candidaturesCache = data || [];
+        majKPIs();
+        rendreListeCandidatures();
       } catch (err) {
         listeEl.innerHTML = `<p style="color:#991b1b;">Erreur inattendue : ${err.message || err}</p>`;
       }
     }
+
+    function rendreListeCandidatures() {
+      const filtre = filtreStatutSuiviEl.value;
+      const liste = candidaturesCache.filter(row => {
+        if (filtre === "all") return true;
+        if (filtre === "relance_due") return row.statut === "postule" && joursDepuis(row.created_at) >= 7;
+        return row.statut === filtre;
+      });
+
+      if (liste.length === 0) {
+        listeEl.innerHTML = "<p>Aucune candidature dans cette catégorie.</p>";
+        return;
+      }
+
+      listeEl.innerHTML = liste.map(row => {
+        const jours = joursDepuis(row.created_at);
+        const relanceDue = row.statut === "postule" && jours >= 7;
+        const score = typeof row.score_match === "number" ? row.score_match : null;
+        const pillScore = score !== null
+          ? `<span class="pill ${score >= 70 ? "pill-green" : score >= 50 ? "pill-amber" : "pill-gray"}">Match ${score}/100</span>`
+          : "";
+        const relances = genererRelancesParLangue(row);
+
+        return `
+          <div class="cand-item ${relanceDue ? "relance-due" : ""}">
+            <div class="cand-top">
+              <div>
+                <strong>${row.poste || "(Sans poste)"}</strong> — ${row.entreprise || "(Sans entreprise)"} ${pillScore}
+                ${relanceDue ? `<span class="pill pill-amber">Relance recommandée (J+${jours})</span>` : ""}
+                <div style="font-size:0.85rem; color:#475569; margin-top:4px;">
+                  ${row.localisation || "Localisation non précisée"} • Source : <strong>${row.source || "manuel"}</strong> • Ajoutée il y a ${jours} j
+                  ${row.lien_offre ? ` • <a href="${row.lien_offre}" target="_blank" rel="noopener noreferrer">Voir l'annonce</a>` : ""}
+                </div>
+              </div>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <select onchange="changerStatutCandidature('${row.id}', this.value)" style="width:auto; padding:5px 8px; font-size:0.85rem;">
+                  <option value="a_postuler" ${row.statut === "a_postuler" ? "selected" : ""}>À postuler</option>
+                  <option value="postule" ${row.statut === "postule" ? "selected" : ""}>Postulé</option>
+                  <option value="relance" ${row.statut === "relance" ? "selected" : ""}>Relancé</option>
+                  <option value="entretien" ${row.statut === "entretien" ? "selected" : ""}>Entretien</option>
+                </select>
+                <button type="button" class="danger small" style="margin:0;" onclick="supprimerCandidature('${row.id}')">Supprimer</button>
+              </div>
+            </div>
+
+            <div style="margin-top:8px;">
+              <button type="button" class="qualif small" onclick="basculerRelanceBox('${row.id}')">Agent Relance & Messages</button>
+            </div>
+
+            <div id="relance-box-${row.id}" class="qualif-box" style="display:none;">
+              ${row.message_approche ? `<div><strong>Message d'approche enregistré :</strong><div style="margin-top:4px; color:#334155;">${row.message_approche}</div></div><hr style="border:none; border-top:1px solid #e2e8f0; margin:10px 0;">` : ""}
+              <div><strong>Message de relance proposé :</strong></div>
+              <div class="lang-bar">
+                <label>Langue :</label>
+                <select onchange="document.getElementById('relance-txt-${row.id}').value = JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify(relances))}'))[this.value]">
+                  <option value="fr" selected>Français</option>
+                  <option value="es">Español</option>
+                  <option value="en">English</option>
+                </select>
+                <button type="button" class="copy-btn small" style="margin:0;" onclick="copierTexteId('relance-txt-${row.id}')">Copier la relance</button>
+              </div>
+              <textarea id="relance-txt-${row.id}" class="msg-out" rows="3">${relances.fr}</textarea>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    filtreStatutSuiviEl.addEventListener("change", rendreListeCandidatures);
+
+    window.basculerRelanceBox = function(id) {
+      const el = document.getElementById(`relance-box-${id}`);
+      if (el) el.style.display = el.style.display === "none" ? "block" : "none";
+    };
+
+    window.changerStatutCandidature = async function(id, nouveauStatut) {
+      try {
+        afficherStatutSuivi("Mise à jour du statut...", "info");
+        const { error } = await supabaseClient
+          .from("candidatures")
+          .update({ statut: nouveauStatut })
+          .eq("id", id);
+
+        if (error) throw new Error(error.message);
+        afficherStatutSuivi("Statut mis à jour.", "ok");
+        await chargerCandidatures();
+      } catch (err) {
+        afficherStatutSuivi("Erreur mise à jour : " + (err.message || err), "err");
+      }
+    };
+
+    window.supprimerCandidature = async function(id) {
+      if (!confirm("Supprimer cette candidature de Supabase ?")) return;
+      try {
+        afficherStatutSuivi("Suppression en cours...", "info");
+        const { error } = await supabaseClient
+          .from("candidatures")
+          .delete()
+          .eq("id", id);
+
+        if (error) throw new Error(error.message);
+        afficherStatutSuivi("Candidature supprimée.", "ok");
+        await chargerCandidatures();
+      } catch (err) {
+        afficherStatutSuivi("Erreur suppression : " + (err.message || err), "err");
+      }
+    };
 
     async function insererCandidature(payload) {
       const { error } = await supabaseClient
@@ -317,14 +785,16 @@
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      afficherMessage("Enregistrement en cours...", false);
+      afficherMessage("Analyse et enregistrement en cours...", false);
 
       try {
         const poste = document.getElementById("poste").value.trim();
         const entreprise = document.getElementById("entreprise").value.trim();
         const localisation = document.getElementById("localisation").value.trim() || null;
+        const sourceManuelle = document.getElementById("source_manuelle").value;
         const notes = document.getElementById("notes").value.trim() || null;
-        const qualif = qualifierOffre({ poste, entreprise, localisation, description: notes || "" }, "fr");
+        const paysEstime = sourceManuelle === "infojobs" ? "es" : "fr";
+        const qualif = qualifierOffre({ poste, entreprise, localisation, description: notes || "" }, paysEstime);
 
         await insererCandidature({
           poste,
@@ -333,12 +803,12 @@
           lien_offre: document.getElementById("lien_offre").value.trim() || null,
           statut: document.getElementById("statut").value,
           notes,
-          source: "manuel",
+          source: sourceManuelle,
           score_match: qualif.score,
           message_approche: qualif.messageApproche
         });
 
-        afficherMessage(`Candidature enregistrée avec succès ! (Score : ${qualif.score}/100)`, false);
+        afficherMessage(`Candidature enregistrée ! (Score calculé : ${qualif.score}/100)`, false);
         form.reset();
       } catch (err) {
         afficherMessage("Erreur d'enregistrement : " + (err.message || err), true);
@@ -366,7 +836,7 @@
 
       if (dernieresOffresAdzuna.length > 0) {
         afficherStatutAdzuna(
-          `${listeFiltree.length} offre(s) affichée(s) sur ${dernieresOffresAdzuna.length} trouvée(s).`,
+          `${listeFiltree.length} offre(s) affichée(s) sur ${dernieresOffresAdzuna.length} récupérée(s).`,
           "ok"
         );
       }
@@ -381,30 +851,32 @@
         const lang = offre._qualif.langueChoisie || "fr";
         return `
           <div class="offre">
-            <div class="offre-titre">
-              ${offre.poste}
-              ${badgeScore(offre._qualif.score)}
+            <div class="offre-gauge">
+              ${rendreJaugeSVG(offre._qualif.score)}
             </div>
-            <div class="offre-meta">${offre.entreprise} — ${offre.localisation}</div>
-            <div class="offre-date">${formaterDatePublication(offre.date_publication)}</div>
-            ${offre.description ? `<div class="offre-desc">${offre.description.slice(0, 240)}...</div>` : ""}
-            <div style="margin-top: 8px;">
-              ${offre.lien_offre ? `<a href="${offre.lien_offre}" target="_blank" rel="noopener noreferrer">Ouvrir l'annonce</a>` : ""}
-              <button type="button" class="qualif small" onclick="basculerDetailQualif(${idx})">Voir synthèse & message</button>
-              <button type="button" class="small" onclick="ajouterOffreAdzuna(${idx})">Ajouter aux candidatures</button>
-            </div>
-            <div id="qualif-${idx}" class="qualif-box" style="display:none;">
-              <div><strong>Synthèse :</strong> ${offre._qualif.synthese}</div>
-              <div class="lang-bar">
-                <label for="lang-select-${idx}">Langue du message :</label>
-                <select id="lang-select-${idx}" onchange="changerLangueMessage(${idx}, this.value)">
-                  <option value="fr" ${lang === "fr" ? "selected" : ""}>Français</option>
-                  <option value="es" ${lang === "es" ? "selected" : ""}>Español</option>
-                  <option value="en" ${lang === "en" ? "selected" : ""}>English</option>
-                </select>
-                <button type="button" class="copy-btn small" style="margin:0;" onclick="copierMessage(${idx})">Copier le message</button>
+            <div class="offre-body">
+              <div class="offre-titre">${offre.poste}</div>
+              <div class="offre-meta">${offre.entreprise} — ${offre.localisation}</div>
+              <div class="offre-date">${formaterDatePublication(offre.date_publication)}</div>
+              ${offre.description ? `<div class="offre-desc">${offre.description.slice(0, 260)}...</div>` : ""}
+              <div style="margin-top: 10px;">
+                ${offre.lien_offre ? `<a href="${offre.lien_offre}" target="_blank" rel="noopener noreferrer" style="margin-right:10px;">Ouvrir l'annonce ↗</a>` : ""}
+                <button type="button" class="qualif small" onclick="basculerDetailQualif(${idx})">Synthèse & Message</button>
+                <button type="button" class="small" onclick="ajouterOffreAdzuna(${idx})">+ Ajouter au suivi</button>
               </div>
-              <textarea id="msg-text-${idx}" class="msg-out" rows="3" oninput="majTexteMessage(${idx}, this.value)">${offre._qualif.messageApproche}</textarea>
+              <div id="qualif-${idx}" class="qualif-box" style="display:none;">
+                <div><strong>Synthèse Agent Qualification :</strong> ${offre._qualif.synthese}</div>
+                <div class="lang-bar">
+                  <label for="lang-select-${idx}">Langue du message :</label>
+                  <select id="lang-select-${idx}" onchange="changerLangueMessage(${idx}, this.value)">
+                    <option value="fr" ${lang === "fr" ? "selected" : ""}>Français</option>
+                    <option value="es" ${lang === "es" ? "selected" : ""}>Español</option>
+                    <option value="en" ${lang === "en" ? "selected" : ""}>English</option>
+                  </select>
+                  <button type="button" class="copy-btn small" style="margin:0;" onclick="copierTexteId('msg-text-${idx}')">Copier le message</button>
+                </div>
+                <textarea id="msg-text-${idx}" class="msg-out" rows="3" oninput="majTexteMessage(${idx}, this.value)">${offre._qualif.messageApproche}</textarea>
+              </div>
             </div>
           </div>
         `;
@@ -413,8 +885,7 @@
 
     window.basculerDetailQualif = function(index) {
       const box = document.getElementById(`qualif-${index}`);
-      if (!box) return;
-      box.style.display = box.style.display === "none" ? "block" : "none";
+      if (box) box.style.display = box.style.display === "none" ? "block" : "none";
     };
 
     window.changerLangueMessage = function(index, langue) {
@@ -428,20 +899,19 @@
 
     window.majTexteMessage = function(index, texte) {
       const offre = dernieresOffresAdzuna[index];
-      if (!offre || !offre._qualif) return;
-      offre._qualif.messageApproche = texte;
+      if (offre && offre._qualif) offre._qualif.messageApproche = texte;
     };
 
-    window.copierMessage = async function(index) {
-      const textarea = document.getElementById(`msg-text-${index}`);
+    window.copierTexteId = async function(elementId) {
+      const textarea = document.getElementById(elementId);
       if (!textarea) return;
       try {
         await navigator.clipboard.writeText(textarea.value);
-        afficherStatutAdzuna("Message copié dans le presse-papiers !", "ok");
+        alert("Texte copié dans le presse-papiers !");
       } catch (e) {
         textarea.select();
         document.execCommand("copy");
-        afficherStatutAdzuna("Message copié !", "ok");
+        alert("Texte copié !");
       }
     };
 
@@ -450,7 +920,7 @@
       if (!offre) return;
 
       try {
-        afficherStatutAdzuna("Ajout en cours dans Supabase...", "info");
+        afficherStatutAdzuna("Enregistrement dans Supabase...", "info");
         await insererCandidature({
           poste: offre.poste,
           entreprise: offre.entreprise,
@@ -462,9 +932,9 @@
           score_match: offre._qualif.score,
           message_approche: offre._qualif.messageApproche
         });
-        afficherStatutAdzuna(`Offre ajoutée : "${offre.poste}" (Score ${offre._qualif.score}/100).`, "ok");
+        afficherStatutAdzuna(`Ajoutée au suivi : "${offre.poste}" (Score ${offre._qualif.score}/100).`, "ok");
       } catch (err) {
-        afficherStatutAdzuna("Erreur ajout Adzuna : " + (err.message || err), "err");
+        afficherStatutAdzuna("Erreur ajout : " + (err.message || err), "err");
       }
     };
 
@@ -476,7 +946,7 @@
       const q = document.getElementById("adzuna-query").value.trim();
       const country = document.getElementById("adzuna-country").value;
 
-      afficherStatutAdzuna("Recherche en cours sur Adzuna...", "info");
+      afficherStatutAdzuna("Agent Veille en cours de recherche sur Adzuna...", "info");
       resultatsAdzunaEl.innerHTML = "";
 
       try {
@@ -493,6 +963,7 @@
           _qualif: qualifierOffre(offre, country)
         }));
 
+        majKPIs();
         appliquerFiltresEtTri();
       } catch (err) {
         afficherStatutAdzuna("Erreur réseau Adzuna : " + (err.message || err), "err");
