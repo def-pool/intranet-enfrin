@@ -12,7 +12,7 @@
     input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
     button { margin-top: 16px; padding: 10px 16px; background: #0f766e; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
     button:hover { background: #115e59; }
-    #message { margin-top: 12px; padding: 10px; border-radius: 4px; display: none; }
+    #message { margin-top: 12px; padding: 10px; border-radius: 4px; display: none; white-space: pre-wrap; }
     .ok { background: #dcfce7; color: #166534; display: block !important; }
     .err { background: #fee2e2; color: #991b1b; display: block !important; }
     .item { padding: 10px; border-bottom: 1px solid #eee; }
@@ -57,72 +57,83 @@
   </div>
 
   <script>
-    // 1. REMPLACEZ CES DEUX VALEURS PAR LES VÔTRES DANS SUPABASE :
-    const SUPABASE_URL = "COLLEZ_VOTRE_PROJECT_URL_ICI";
-    const SUPABASE_ANON_KEY = "COLLEZ_VOTRE_ANON_KEY_ICI";
+    const SUPABASE_URL = "https://cftqeuzcddyxyrxutjwd.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_7Lbz8CO9IoUng0DOejAY5Q_aFM-3mvh";
 
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    const form = document.getElementById("form-candidature");
     const msgBox = document.getElementById("message");
     const listeEl = document.getElementById("liste");
+    const form = document.getElementById("form-candidature");
 
     function afficherMessage(texte, estErreur = false) {
       msgBox.textContent = texte;
       msgBox.className = estErreur ? "err" : "ok";
     }
 
+    if (!window.supabase || !window.supabase.createClient) {
+      afficherMessage("Erreur : la bibliothèque Supabase ne s'est pas chargée.", true);
+    }
+
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
     async function chargerCandidatures() {
-      const { data, error } = await supabaseClient
-        .from("candidatures")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(10);
+      try {
+        const { data, error } = await supabaseClient
+          .from("candidatures")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(10);
 
-      if (error) {
-        listeEl.innerHTML = `<p style="color:#991b1b;">Erreur lecture : ${error.message}</p>`;
-        return;
+        if (error) {
+          listeEl.innerHTML = `<p style="color:#991b1b;">Erreur lecture : ${error.message}</p>`;
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          listeEl.innerHTML = "<p>Aucune candidature enregistrée pour le moment.</p>";
+          return;
+        }
+
+        listeEl.innerHTML = data.map(row => `
+          <div class="item">
+            <strong>${row.poste || "(Sans poste)"}</strong> — ${row.entreprise || "(Sans entreprise)"}<br>
+            <small>Statut : ${row.statut || "-"} | ${row.localisation || ""}</small>
+          </div>
+        `).join("");
+      } catch (err) {
+        listeEl.innerHTML = `<p style="color:#991b1b;">Erreur inattendue : ${err.message || err}</p>`;
       }
-
-      if (!data || data.length === 0) {
-        listeEl.innerHTML = "<p>Aucune candidature enregistrée pour le moment.</p>";
-        return;
-      }
-
-      listeEl.innerHTML = data.map(row => `
-        <div class="item">
-          <strong>${row.poste || "(Sans poste)"}</strong> — ${row.entreprise || "(Sans entreprise)"}<br>
-          <small>Statut : ${row.statut || "-"} | ${row.localisation || ""}</small>
-        </div>
-      `).join("");
     }
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       afficherMessage("Enregistrement en cours...", false);
 
-      const nouvelleCandidature = {
-        poste: document.getElementById("poste").value.trim(),
-        entreprise: document.getElementById("entreprise").value.trim(),
-        localisation: document.getElementById("localisation").value.trim() || null,
-        lien_offre: document.getElementById("lien_offre").value.trim() || null,
-        statut: document.getElementById("statut").value,
-        notes: document.getElementById("notes").value.trim() || null,
-        source: "manuel"
-      };
+      try {
+        const nouvelleCandidature = {
+          poste: document.getElementById("poste").value.trim(),
+          entreprise: document.getElementById("entreprise").value.trim(),
+          localisation: document.getElementById("localisation").value.trim() || null,
+          lien_offre: document.getElementById("lien_offre").value.trim() || null,
+          statut: document.getElementById("statut").value,
+          notes: document.getElementById("notes").value.trim() || null,
+          source: "manuel"
+        };
 
-      const { error } = await supabaseClient
-        .from("candidatures")
-        .insert([nouvelleCandidature]);
+        const { error } = await supabaseClient
+          .from("candidatures")
+          .insert([nouvelleCandidature]);
 
-      if (error) {
-        afficherMessage("Erreur d'enregistrement : " + error.message, true);
-        return;
+        if (error) {
+          afficherMessage("Erreur d'enregistrement : " + error.message, true);
+          return;
+        }
+
+        afficherMessage("Candidature enregistrée avec succès !", false);
+        form.reset();
+        await chargerCandidatures();
+      } catch (err) {
+        afficherMessage("Erreur technique : " + (err.message || err), true);
       }
-
-      afficherMessage("Candidature enregistrée avec succès !", false);
-      form.reset();
-      await chargerCandidatures();
     });
 
     chargerCandidatures();
