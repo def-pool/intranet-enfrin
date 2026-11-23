@@ -14,8 +14,9 @@ export default async function handler(req, res) {
     const url = new URL(`https://api.adzuna.com/v1/api/jobs/${country}/search/${page}`);
     url.searchParams.set("app_id", appId);
     url.searchParams.set("app_key", appKey);
-    url.searchParams.set("results_per_page", "15");
+    url.searchParams.set("results_per_page", "30");
     url.searchParams.set("what", query);
+    url.searchParams.set("sort_by", "date");
 
     const response = await fetch(url.toString());
     if (!response.ok) {
@@ -31,6 +32,7 @@ export default async function handler(req, res) {
       localisation: item.location?.display_name || country.toUpperCase(),
       lien_offre: item.redirect_url || null,
       description: item.description || "",
+      date_publication: item.created || null,
       source: "adzuna"
     }));
 
