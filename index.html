@@ -1,239 +1,131 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Intranet — Suivi Candidatures B2B</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #1a1a1a; }
-  header { background: linear-gradient(135deg, #1e3a5f, #2c5282); color: white; padding: 24px 32px; }
-  header h1 { font-size: 24px; }
-  header p { opacity: 0.85; font-size: 14px; margin-top: 4px; }
-  .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
-  .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-  .tab { padding: 10px 20px; background: white; border: 1px solid #d1d5db; border-radius: 8px; cursor: pointer; font-weight: 500; transition: all 0.2s; }
-  .tab.active { background: #2c5282; color: white; border-color: #2c5282; }
-  .panel { display: none; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-  .panel.active { display: block; }
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
-  .stat { background: #f7fafc; border-left: 4px solid #2c5282; padding: 16px; border-radius: 8px; }
-  .stat .value { font-size: 28px; font-weight: 700; color: #2c5282; }
-  .stat .label { font-size: 13px; color: #64748b; margin-top: 4px; }
-  .form-group { margin-bottom: 12px; display: flex; gap: 12px; flex-wrap: wrap; }
-  .form-group input, .form-group select { padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; flex: 1; min-width: 200px; }
-  .btn { padding: 10px 20px; background: #2c5282; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
-  .btn:hover { background: #1e3a5f; }
-  .btn-delete { background: #fee2e2; color: #991b1b; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 14px; }
-  .btn-delete:hover { background: #fca5a5; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 16px; }
-  th { background: #f1f5f9; text-align: left; padding: 12px; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
-  td { padding: 12px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
-  .badge { padding: 6px 10px; border-radius: 6px; font-size: 13px; font-weight: 600; border: 1px solid #d1d5db; background: white; cursor: pointer; }
-  .agent-card { background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin-bottom: 12px; }
-  .agent-card h3 { font-size: 16px; margin-bottom: 8px; }
-  .agent-card .kw { font-size: 13px; color: #64748b; }
-  a { color: #2c5282; text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  footer { text-align: center; padding: 24px; color: #94a3b8; font-size: 13px; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Intranet — Test Ajout Candidature</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 680px; margin: 40px auto; padding: 0 16px; background: #f6f8fa; }
+    .card { background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px; }
+    label { display: block; font-weight: bold; margin-top: 12px; margin-bottom: 4px; }
+    input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { margin-top: 16px; padding: 10px 16px; background: #0f766e; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #115e59; }
+    #message { margin-top: 12px; padding: 10px; border-radius: 4px; display: none; }
+    .ok { background: #dcfce7; color: #166534; display: block !important; }
+    .err { background: #fee2e2; color: #991b1b; display: block !important; }
+    .item { padding: 10px; border-bottom: 1px solid #eee; }
+  </style>
 </head>
 <body>
+  <h1>Suivi des candidatures — Test d'ajout</h1>
 
-<header>
-  <h1>📊 Intranet — Suivi Candidatures B2B</h1>
-  <p>Damien Enfrin — Direction Commerciale France & International</p>
-</header>
+  <div class="card">
+    <form id="form-candidature">
+      <label for="poste">Intitulé du poste *</label>
+      <input id="poste" type="text" required placeholder="Ex. Responsable Commercial B2B" />
 
-<div class="container">
+      <label for="entreprise">Entreprise *</label>
+      <input id="entreprise" type="text" required placeholder="Ex. Exemple Industrie" />
 
-  <div class="tabs">
-    <div class="tab active" onclick="showTab('dashboard', this)">📈 Tableau de bord</div>
-    <div class="tab" onclick="showTab('candidatures', this)">📋 Mes candidatures</div>
-    <div class="tab" onclick="showTab('agents', this)">🤖 Agents IA</div>
-    <div class="tab" onclick="showTab('liens', this)">🔗 Liens utiles</div>
-  </div>
+      <label for="localisation">Localisation</label>
+      <input id="localisation" type="text" placeholder="Ex. France / Itinérant" />
 
-  <!-- DASHBOARD -->
-  <div id="dashboard" class="panel active">
-    <h2 style="margin-bottom:16px;">Vue d'ensemble</h2>
-    <div class="stats" id="statsContainer">
-      <div class="stat"><div class="value" id="stat-total">0</div><div class="label">Candidatures totales</div></div>
-      <div class="stat"><div class="value" id="stat-encours">0</div><div class="label">En cours</div></div>
-      <div class="stat"><div class="value" id="stat-entretien">0</div><div class="label">Entretiens</div></div>
-      <div class="stat"><div class="value" id="stat-refus">0</div><div class="label">Refus</div></div>
-    </div>
-  </div>
+      <label for="lien_offre">Lien de l'offre</label>
+      <input id="lien_offre" type="url" placeholder="https://..." />
 
-  <!-- CANDIDATURES -->
-  <div id="candidatures" class="panel">
-    <h2 style="margin-bottom:16px;">Ajouter une candidature</h2>
-    <form id="formCandidature" class="form-group">
-      <input type="text" id="entreprise" placeholder="Entreprise (ex: Fluidra)" required>
-      <input type="text" id="poste" placeholder="Poste (ex: Directeur Commercial)" required>
-      <select id="pays">
-        <option value="France">France</option>
-        <option value="Espagne">Espagne</option>
-        <option value="Allemagne">Allemagne</option>
-        <option value="International">International</option>
+      <label for="statut">Statut</label>
+      <select id="statut">
+        <option value="a_postuler">À postuler</option>
+        <option value="postule">Postulé</option>
+        <option value="relance">Relance</option>
+        <option value="entretien">Entretien</option>
       </select>
-      <select id="source">
-        <option value="LinkedIn">LinkedIn</option>
-        <option value="Indeed">Indeed</option>
-        <option value="Manpower">Manpower</option>
-        <option value="France Travail">France Travail</option>
-        <option value="Autre">Autre</option>
-      </select>
-      <button type="submit" class="btn">+ Ajouter</button>
+
+      <label for="notes">Notes</label>
+      <textarea id="notes" rows="3" placeholder="Informations utiles..."></textarea>
+
+      <button type="submit">Enregistrer dans Supabase</button>
     </form>
-
-    <h2 style="margin-top:32px; margin-bottom:16px;">Toutes mes candidatures</h2>
-    <div style="overflow-x:auto;">
-      <table>
-        <thead>
-          <tr>
-            <th>Entreprise</th>
-            <th>Poste</th>
-            <th>Pays</th>
-            <th>Source</th>
-            <th>Date</th>
-            <th>Statut (modifiable)</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody">
-          <tr><td colspan="7" style="text-align:center; color:#64748b;">Chargement des données...</td></tr>
-        </tbody>
-      </table>
-    </div>
+    <div id="message"></div>
   </div>
 
-  <!-- AGENTS IA -->
-  <div id="agents" class="panel">
-    <h2 style="margin-bottom:16px;">🤖 Mes agents de recherche</h2>
-    <div class="agent-card">
-      <h3>🇫🇷 Agent France</h3>
-      <p class="kw"><strong>Mots-clés :</strong> directeur commercial, business development, industrie</p>
-      <p style="margin-top:8px;"><a href="https://www.linkedin.com/jobs/search/?keywords=directeur%20commercial" target="_blank">Rechercher sur LinkedIn</a></p>
-    </div>
+  <div class="card">
+    <h2>Dernières candidatures enregistrées</h2>
+    <div id="liste">Chargement...</div>
   </div>
 
-  <!-- LIENS UTILES -->
-  <div id="liens" class="panel">
-    <h2 style="margin-bottom:16px;">🔗 Liens utiles — Job boards</h2>
-    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
-      <div class="agent-card">
-        <h3>🇫🇷 France</h3>
-        <p class="kw">
-          <a href="https://www.apec.fr" target="_blank">APEC</a> · 
-          <a href="https://www.indeed.fr" target="_blank">Indeed</a> · 
-          <a href="https://www.linkedin.com/jobs" target="_blank">LinkedIn</a> · 
-          <a href="https://candidat.francetravail.fr" target="_blank">France Travail</a>
-        </p>
-      </div>
-    </div>
-  </div>
+  <script>
+    // 1. REMPLACEZ CES DEUX VALEURS PAR LES VÔTRES DANS SUPABASE :
+    const SUPABASE_URL = "COLLEZ_VOTRE_PROJECT_URL_ICI";
+    const SUPABASE_ANON_KEY = "COLLEZ_VOTRE_ANON_KEY_ICI";
 
-</div>
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-<footer>
-  Intranet personnel — Damien Enfrin · 100% gratuit
-</footer>
+    const form = document.getElementById("form-candidature");
+    const msgBox = document.getElementById("message");
+    const listeEl = document.getElementById("liste");
 
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    function afficherMessage(texte, estErreur = false) {
+      msgBox.textContent = texte;
+      msgBox.className = estErreur ? "err" : "ok";
+    }
 
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const SUPABASE_URL = 'https://cftqeuzcddyxyrxutjwd.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_7Lbz8CO9IoUng0DOejAY5Q_aFM-3mvh';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    async function chargerCandidatures() {
+      const { data, error } = await supabaseClient
+        .from("candidatures")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(10);
 
-    window.showTab = function(tabId, el) {
-      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
-      el.classList.add('active');
-    };
-
-    window.chargerCandidatures = async function() {
-      const { data, error } = await supabaseClient.from('candidatures').select('*').order('created_at', { ascending: false });
-      
       if (error) {
-        document.getElementById('tableBody').innerHTML = `<tr><td colspan="7" style="color:red">Erreur : ${error.message}</td></tr>`;
+        listeEl.innerHTML = `<p style="color:#991b1b;">Erreur lecture : ${error.message}</p>`;
         return;
       }
 
-      document.getElementById('stat-total').textContent = data.length;
-      document.getElementById('stat-encours').textContent = data.filter(c => c.statut === 'Envoyée').length;
-      document.getElementById('stat-entretien').textContent = data.filter(c => c.statut === 'Entretien').length;
-      document.getElementById('stat-refus').textContent = data.filter(c => c.statut === 'Refus').length;
-
-      if (data.length === 0) {
-        document.getElementById('tableBody').innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b;">Aucune candidature pour le moment.</td></tr>';
+      if (!data || data.length === 0) {
+        listeEl.innerHTML = "<p>Aucune candidature enregistrée pour le moment.</p>";
         return;
       }
 
-      // Génération des lignes avec un menu déroulant pour le statut et un bouton supprimer
-      const rows = data.map(c => `
-        <tr id="row-${c.id}">
-          <td><strong>${c.entreprise}</strong></td>
-          <td>${c.poste}</td>
-          <td>${c.pays}</td>
-          <td>${c.source}</td>
-          <td>${new Date(c.date_candidature).toLocaleDateString('fr-FR')}</td>
-          <td>
-            <select class="badge" onchange="changerStatut(${c.id}, this.value)">
-              <option value="Envoyée" ${c.statut === 'Envoyée' ? 'selected' : ''}>Envoyée</option>
-              <option value="Entretien" ${c.statut === 'Entretien' ? 'selected' : ''}>Entretien</option>
-              <option value="Offre reçue" ${c.statut === 'Offre reçue' ? 'selected' : ''}>Offre reçue</option>
-              <option value="Refus" ${c.statut === 'Refus' ? 'selected' : ''}>Refus</option>
-            </select>
-          </td>
-          <td>
-            <button class="btn-delete" onclick="supprimerCandidature(${c.id})">🗑️ Suppr.</button>
-          </td>
-        </tr>
-      `).join('');
-      
-      document.getElementById('tableBody').innerHTML = rows;
-    };
+      listeEl.innerHTML = data.map(row => `
+        <div class="item">
+          <strong>${row.poste || "(Sans poste)"}</strong> — ${row.entreprise || "(Sans entreprise)"}<br>
+          <small>Statut : ${row.statut || "-"} | ${row.localisation || ""}</small>
+        </div>
+      `).join("");
+    }
 
-    // Fonction pour modifier le statut
-    window.changerStatut = async function(id, nouveauStatut) {
-      const { error } = await supabaseClient.from('candidatures').update({ statut: nouveauStatut }).eq('id', id);
-      if (error) alert("Erreur : " + error.message);
-      else chargerCandidatures(); // Recharge pour mettre à jour les stats
-    };
-
-    // Fonction pour supprimer une ligne
-    window.supprimerCandidature = async function(id) {
-      if (confirm("Voulez-vous vraiment supprimer cette candidature ?")) {
-        const { error } = await supabaseClient.from('candidatures').delete().eq('id', id);
-        if (error) alert("Erreur : " + error.message);
-        else chargerCandidatures(); // Recharge le tableau
-      }
-    };
-
-    document.getElementById('formCandidature').addEventListener('submit', async (e) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
+      afficherMessage("Enregistrement en cours...", false);
+
       const nouvelleCandidature = {
-        entreprise: document.getElementById('entreprise').value,
-        poste: document.getElementById('poste').value,
-        pays: document.getElementById('pays').value,
-        source: document.getElementById('source').value,
-        statut: 'Envoyée'
+        poste: document.getElementById("poste").value.trim(),
+        entreprise: document.getElementById("entreprise").value.trim(),
+        localisation: document.getElementById("localisation").value.trim() || null,
+        lien_offre: document.getElementById("lien_offre").value.trim() || null,
+        statut: document.getElementById("statut").value,
+        notes: document.getElementById("notes").value.trim() || null,
+        source: "manuel"
       };
 
-      const { error } = await supabaseClient.from('candidatures').insert([nouvelleCandidature]);
-      if (error) alert("Erreur lors de l'ajout : " + error.message);
-      else {
-        document.getElementById('formCandidature').reset();
-        chargerCandidatures();
+      const { error } = await supabaseClient
+        .from("candidatures")
+        .insert([nouvelleCandidature]);
+
+      if (error) {
+        afficherMessage("Erreur d'enregistrement : " + error.message, true);
+        return;
       }
+
+      afficherMessage("Candidature enregistrée avec succès !", false);
+      form.reset();
+      await chargerCandidatures();
     });
 
     chargerCandidatures();
-  });
-</script>
+  </script>
 </body>
 </html>
