@@ -18,6 +18,8 @@
     button.secondary:hover { background: #1d4ed8; }
     button.qualif { background: #7c3aed; }
     button.qualif:hover { background: #6d28d9; }
+    button.copy-btn { background: #475569; }
+    button.copy-btn:hover { background: #334155; }
     button.small { margin-top: 8px; margin-right: 8px; padding: 6px 10px; font-size: 0.9rem; }
     .row { display: flex; gap: 12px; flex-wrap: wrap; }
     .row > div { flex: 1 1 200px; }
@@ -36,8 +38,11 @@
     .b-high { background: #dcfce7; color: #166534; }
     .b-mid { background: #fef3c7; color: #92400e; }
     .b-low { background: #f3f4f6; color: #374151; }
-    .qualif-box { margin-top: 10px; padding: 10px; background: #f9fafb; border-left: 3px solid #7c3aed; border-radius: 4px; font-size: 0.9rem; }
-    textarea.msg-out { margin-top: 6px; font-size: 0.85rem; background: #fff; }
+    .qualif-box { margin-top: 10px; padding: 12px; background: #f9fafb; border-left: 3px solid #7c3aed; border-radius: 4px; font-size: 0.9rem; }
+    .lang-bar { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+    .lang-bar label { margin: 0; font-size: 0.88rem; }
+    .lang-bar select { width: auto; padding: 5px 8px; font-size: 0.88rem; }
+    textarea.msg-out { margin-top: 8px; font-size: 0.88rem; background: #fff; }
     a { color: #0f766e; }
   </style>
 </head>
@@ -160,6 +165,14 @@
 
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
+    function genererMessagesParLangue(offre) {
+      return {
+        fr: `Bonjour, j'ai repéré le poste de ${offre.poste} chez ${offre.entreprise}. Fort de plus de 20 ans d'expérience en développement commercial B2B, structuration de réseaux/comptes clés et équipements techniques/traitement de l'eau sur la France et l'Europe, j'aimerais échanger avec vous sur l'apport concret de mon profil à vos objectifs.`,
+        es: `Hola, he visto la posición de ${offre.poste} en ${offre.entreprise}. Cuento con más de 20 años de experiencia en desarrollo comercial B2B, gestión de redes y equipos, y tratamiento de agua/equipamiento técnico entre Francia, España y Europa. ¿Le parece que conversemos brevemente sobre cómo puedo aportar valor a su crecimiento?`,
+        en: `Hello, I noticed the ${offre.poste} role at ${offre.entreprise}. With over 20 years of experience in B2B sales development, network/key account management, and technical water treatment/pool equipment across France and Europe, I would welcome a brief conversation on how I can support your growth.`
+      };
+    }
+
     // AGENT DE QUALIFICATION NIVEAU 1
     function qualifierOffre(offre, pays = "fr") {
       const texte = `${offre.poste || ""} ${offre.entreprise || ""} ${offre.localisation || ""} ${offre.description || ""}`.toLowerCase();
@@ -189,16 +202,20 @@
 
       score = Math.max(5, Math.min(100, score));
 
-      const estEspagnol = pays === "es" || /\b(españa|madrid|barcelona|valencia|comercial|responsable)\b/.test(texte);
-      const messageApproche = estEspagnol
-        ? `Hola, he visto la posición de ${offre.poste} en ${offre.entreprise}. Cuento con más de 20 años de experiencia en desarrollo comercial B2B, gestión de redes y equipos, y tratamiento de agua/equipamiento técnico entre Francia, España y Europa. ¿Le parece que conversemos brevemente sobre cómo puedo aportar valor a su crecimiento?`
-        : `Bonjour, j'ai repéré le poste de ${offre.poste} chez ${offre.entreprise}. Fort de plus de 20 ans d'expérience en développement commercial B2B, structuration de réseaux/comptes clés et équipements techniques/traitement de l'eau sur la France et l'Europe, j'aimerais échanger avec vous sur l'apport concret de mon profil à vos objectifs.`;
+      const messages = genererMessagesParLangue(offre);
+      const langueDefaut = pays === "es" ? "es" : "fr";
 
       const synthese = pointsForts.length > 0
         ? `Critères alignés : ${pointsForts.join(" ; ")}.${pointsVigilance.length ? " Vigilance : " + pointsVigilance.join(" ; ") + "." : ""}`
         : "Correspondance partielle à vérifier dans le détail de la fiche de poste.";
 
-      return { score, synthese, messageApproche };
+      return {
+        score,
+        synthese,
+        messages,
+        langueChoisie: langueDefaut,
+        messageApproche: messages[langueDefaut]
+      };
     }
 
     function badgeScore(score) {
@@ -359,33 +376,73 @@
         return;
       }
 
-      resultatsAdzunaEl.innerHTML = listeFiltree.map(offre => `
-        <div class="offre">
-          <div class="offre-titre">
-            ${offre.poste}
-            ${badgeScore(offre._qualif.score)}
+      resultatsAdzunaEl.innerHTML = listeFiltree.map(offre => {
+        const idx = offre.indexOriginal;
+        const lang = offre._qualif.langueChoisie || "fr";
+        return `
+          <div class="offre">
+            <div class="offre-titre">
+              ${offre.poste}
+              ${badgeScore(offre._qualif.score)}
+            </div>
+            <div class="offre-meta">${offre.entreprise} — ${offre.localisation}</div>
+            <div class="offre-date">${formaterDatePublication(offre.date_publication)}</div>
+            ${offre.description ? `<div class="offre-desc">${offre.description.slice(0, 240)}...</div>` : ""}
+            <div style="margin-top: 8px;">
+              ${offre.lien_offre ? `<a href="${offre.lien_offre}" target="_blank" rel="noopener noreferrer">Ouvrir l'annonce</a>` : ""}
+              <button type="button" class="qualif small" onclick="basculerDetailQualif(${idx})">Voir synthèse & message</button>
+              <button type="button" class="small" onclick="ajouterOffreAdzuna(${idx})">Ajouter aux candidatures</button>
+            </div>
+            <div id="qualif-${idx}" class="qualif-box" style="display:none;">
+              <div><strong>Synthèse :</strong> ${offre._qualif.synthese}</div>
+              <div class="lang-bar">
+                <label for="lang-select-${idx}">Langue du message :</label>
+                <select id="lang-select-${idx}" onchange="changerLangueMessage(${idx}, this.value)">
+                  <option value="fr" ${lang === "fr" ? "selected" : ""}>Français</option>
+                  <option value="es" ${lang === "es" ? "selected" : ""}>Español</option>
+                  <option value="en" ${lang === "en" ? "selected" : ""}>English</option>
+                </select>
+                <button type="button" class="copy-btn small" style="margin:0;" onclick="copierMessage(${idx})">Copier le message</button>
+              </div>
+              <textarea id="msg-text-${idx}" class="msg-out" rows="3" oninput="majTexteMessage(${idx}, this.value)">${offre._qualif.messageApproche}</textarea>
+            </div>
           </div>
-          <div class="offre-meta">${offre.entreprise} — ${offre.localisation}</div>
-          <div class="offre-date">${formaterDatePublication(offre.date_publication)}</div>
-          ${offre.description ? `<div class="offre-desc">${offre.description.slice(0, 240)}...</div>` : ""}
-          <div style="margin-top: 8px;">
-            ${offre.lien_offre ? `<a href="${offre.lien_offre}" target="_blank" rel="noopener noreferrer">Ouvrir l'annonce</a>` : ""}
-            <button type="button" class="qualif small" onclick="basculerDetailQualif(${offre.indexOriginal})">Voir synthèse & message</button>
-            <button type="button" class="small" onclick="ajouterOffreAdzuna(${offre.indexOriginal})">Ajouter aux candidatures</button>
-          </div>
-          <div id="qualif-${offre.indexOriginal}" class="qualif-box" style="display:none;">
-            <div><strong>Synthèse :</strong> ${offre._qualif.synthese}</div>
-            <div style="margin-top: 6px;"><strong>Message d'approche proposé :</strong></div>
-            <textarea class="msg-out" rows="3" readonly>${offre._qualif.messageApproche}</textarea>
-          </div>
-        </div>
-      `).join("");
+        `;
+      }).join("");
     }
 
     window.basculerDetailQualif = function(index) {
       const box = document.getElementById(`qualif-${index}`);
       if (!box) return;
       box.style.display = box.style.display === "none" ? "block" : "none";
+    };
+
+    window.changerLangueMessage = function(index, langue) {
+      const offre = dernieresOffresAdzuna[index];
+      if (!offre || !offre._qualif) return;
+      offre._qualif.langueChoisie = langue;
+      offre._qualif.messageApproche = offre._qualif.messages[langue] || offre._qualif.messages.fr;
+      const textarea = document.getElementById(`msg-text-${index}`);
+      if (textarea) textarea.value = offre._qualif.messageApproche;
+    };
+
+    window.majTexteMessage = function(index, texte) {
+      const offre = dernieresOffresAdzuna[index];
+      if (!offre || !offre._qualif) return;
+      offre._qualif.messageApproche = texte;
+    };
+
+    window.copierMessage = async function(index) {
+      const textarea = document.getElementById(`msg-text-${index}`);
+      if (!textarea) return;
+      try {
+        await navigator.clipboard.writeText(textarea.value);
+        afficherStatutAdzuna("Message copié dans le presse-papiers !", "ok");
+      } catch (e) {
+        textarea.select();
+        document.execCommand("copy");
+        afficherStatutAdzuna("Message copié !", "ok");
+      }
     };
 
     window.ajouterOffreAdzuna = async function(index) {
