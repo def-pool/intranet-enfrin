@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Intranet — Suivi Candidatures B2B</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #1a1a1a; }
@@ -21,18 +20,14 @@
   .stat { background: #f7fafc; border-left: 4px solid #2c5282; padding: 16px; border-radius: 8px; }
   .stat .value { font-size: 28px; font-weight: 700; color: #2c5282; }
   .stat .label { font-size: 13px; color: #64748b; margin-top: 4px; }
-  
-  /* Formulaire */
   .form-group { margin-bottom: 12px; display: flex; gap: 12px; flex-wrap: wrap; }
   .form-group input, .form-group select { padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; flex: 1; min-width: 200px; }
   .btn { padding: 10px 20px; background: #2c5282; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
   .btn:hover { background: #1e3a5f; }
-  
   table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 16px; }
   th { background: #f1f5f9; text-align: left; padding: 12px; font-weight: 600; border-bottom: 2px solid #e2e8f0; }
   td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
   .badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; background: #dbeafe; color: #1e40af; }
-  
   .agent-card { background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin-bottom: 12px; }
   .agent-card h3 { font-size: 16px; margin-bottom: 8px; }
   .agent-card .kw { font-size: 13px; color: #64748b; }
@@ -136,13 +131,6 @@
           <a href="https://candidat.francetravail.fr" target="_blank">France Travail</a>
         </p>
       </div>
-      <div class="agent-card">
-        <h3>🇪🇸 Espagne</h3>
-        <p class="kw">
-          <a href="https://www.infojobs.net" target="_blank">InfoJobs</a> · 
-          <a href="https://www.linkedin.com/jobs" target="_blank">LinkedIn</a>
-        </p>
-      </div>
     </div>
   </div>
 
@@ -152,79 +140,94 @@
   Intranet personnel — Damien Enfrin · 100% gratuit
 </footer>
 
+<!-- Intégration de Supabase directement -->
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
 <script>
-// === CONNEXION SUPABASE ===
-const SUPABASE_URL = 'https://cftqeuzcddyxyrxutjwd.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_7Lbz8CO9IoUng0DOejAY5Q_aFM-3mvh';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  // On attend que le DOM soit chargé
+  document.addEventListener("DOMContentLoaded", () => {
+    
+    // === CONNEXION SUPABASE ===
+    const SUPABASE_URL = 'https://cftqeuzcddyxyrxutjwd.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_7Lbz8CO9IoUng0DOejAY5Q_aFM-3mvh';
+    let supabaseClient;
+    
+    try {
+      // Nouvelle syntaxe
+      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    } catch(e) {
+      console.error("Erreur d'initialisation Supabase", e);
+    }
 
-// === NAVIGATION ONGLETS ===
-function showTab(tabId, el) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById(tabId).classList.add('active');
-  el.classList.add('active');
-}
+    // === NAVIGATION ONGLETS ===
+    window.showTab = function(tabId, el) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      el.classList.add('active');
+    };
 
-// === CHARGER LES CANDIDATURES ===
-async function chargerCandidatures() {
-  const { data, error } = await supabase.from('candidatures').select('*').order('created_at', { ascending: false });
-  
-  if (error) {
-    console.error(error);
-    document.getElementById('tableBody').innerHTML = `<tr><td colspan="6" style="color:red">Erreur de chargement : ${error.message}</td></tr>`;
-    return;
-  }
+    // === CHARGER LES CANDIDATURES ===
+    window.chargerCandidatures = async function() {
+      if(!supabaseClient) return;
+      
+      const { data, error } = await supabaseClient.from('candidatures').select('*').order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error(error);
+        document.getElementById('tableBody').innerHTML = `<tr><td colspan="6" style="color:red">Erreur : ${error.message}</td></tr>`;
+        return;
+      }
 
-  // Mise à jour des stats
-  document.getElementById('stat-total').textContent = data.length;
-  document.getElementById('stat-encours').textContent = data.filter(c => c.statut === 'Envoyée').length;
-  document.getElementById('stat-entretien').textContent = data.filter(c => c.statut === 'Entretien').length;
+      document.getElementById('stat-total').textContent = data.length;
+      document.getElementById('stat-encours').textContent = data.filter(c => c.statut === 'Envoyée').length;
+      document.getElementById('stat-entretien').textContent = data.filter(c => c.statut === 'Entretien').length;
 
-  // Mise à jour du tableau
-  if (data.length === 0) {
-    document.getElementById('tableBody').innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">Aucune candidature pour le moment.</td></tr>';
-    return;
-  }
+      if (data.length === 0) {
+        document.getElementById('tableBody').innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">Aucune candidature pour le moment.</td></tr>';
+        return;
+      }
 
-  const rows = data.map(c => `
-    <tr>
-      <td><strong>${c.entreprise}</strong></td>
-      <td>${c.poste}</td>
-      <td>${c.pays}</td>
-      <td>${c.source}</td>
-      <td>${new Date(c.date_candidature).toLocaleDateString('fr-FR')}</td>
-      <td><span class="badge">${c.statut}</span></td>
-    </tr>
-  `).join('');
-  
-  document.getElementById('tableBody').innerHTML = rows;
-}
+      const rows = data.map(c => `
+        <tr>
+          <td><strong>${c.entreprise}</strong></td>
+          <td>${c.poste}</td>
+          <td>${c.pays}</td>
+          <td>${c.source}</td>
+          <td>${new Date(c.date_candidature).toLocaleDateString('fr-FR')}</td>
+          <td><span class="badge">${c.statut}</span></td>
+        </tr>
+      `).join('');
+      
+      document.getElementById('tableBody').innerHTML = rows;
+    };
 
-// === AJOUTER UNE CANDIDATURE ===
-document.getElementById('formCandidature').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  
-  const nouvelleCandidature = {
-    entreprise: document.getElementById('entreprise').value,
-    poste: document.getElementById('poste').value,
-    pays: document.getElementById('pays').value,
-    source: document.getElementById('source').value,
-    statut: 'Envoyée'
-  };
+    // === AJOUTER UNE CANDIDATURE ===
+    document.getElementById('formCandidature').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if(!supabaseClient) return alert("Erreur de connexion à la base de données.");
+      
+      const nouvelleCandidature = {
+        entreprise: document.getElementById('entreprise').value,
+        poste: document.getElementById('poste').value,
+        pays: document.getElementById('pays').value,
+        source: document.getElementById('source').value,
+        statut: 'Envoyée'
+      };
 
-  const { error } = await supabase.from('candidatures').insert([nouvelleCandidature]);
-  
-  if (error) {
-    alert("Erreur lors de l'ajout : " + error.message);
-  } else {
-    document.getElementById('formCandidature').reset();
-    chargerCandidatures(); // Recharge le tableau
-  }
-});
+      const { error } = await supabaseClient.from('candidatures').insert([nouvelleCandidature]);
+      
+      if (error) {
+        alert("Erreur lors de l'ajout : " + error.message);
+      } else {
+        document.getElementById('formCandidature').reset();
+        chargerCandidatures();
+      }
+    });
 
-// === LANCEMENT AU CHARGEMENT ===
-chargerCandidatures();
+    // === LANCEMENT AU CHARGEMENT ===
+    chargerCandidatures();
+  });
 </script>
 </body>
 </html>
