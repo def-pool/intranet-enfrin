@@ -287,7 +287,7 @@
   <!-- ONGLET 1 : AGENT VEILLE & HUB SOURCES -->
   <div id="tab-veille" class="tab-panel active">
     <div class="card">
-      <h2>Recherche API Adzuna & Lancement multi-portails</h2>
+      <h2>Recherche API Adzuna & France Travail + Lancement multi-portails</h2>
       <form id="form-adzuna">
         <div class="row">
           <div>
@@ -304,7 +304,7 @@
             </select>
           </div>
         </div>
-        <button type="submit" class="secondary">Lancer l'Agent Veille (Adzuna)</button>
+        <button type="submit" class="secondary">Lancer l'Agent Veille (Adzuna & France Travail)</button>
       </form>
 
       <!-- HUB DES AUTRES SITES (LIENS PRÉ-FILTRÉS EN 1 CLIC) -->
@@ -471,7 +471,6 @@
     // JAUGE SVG AVEC ROUE COLORÉE ET AIGUILLE
     function rendreJaugeSVG(score) {
       const s = Math.max(0, Math.min(100, Number(score) || 0));
-      // Angle de -90° (gauche, 0) à +90° (droite, 100)
       const angle = -90 + (s / 100) * 180;
       let couleur = "#dc2626";
       let label = "Faible";
@@ -480,13 +479,9 @@
 
       return `
         <svg viewBox="0 0 120 75" width="110" height="70" aria-label="Score ${s} sur 100">
-          <!-- Arc Rouge (0 -> 50%) -->
           <path d="M 12 60 A 48 48 0 0 1 60 12" fill="none" stroke="#ef4444" stroke-width="11" stroke-linecap="butt" />
-          <!-- Arc Orange (50% -> 70%) -->
           <path d="M 60 12 A 48 48 0 0 1 88.2 21.2" fill="none" stroke="#f59e0b" stroke-width="11" stroke-linecap="butt" />
-          <!-- Arc Vert (70% -> 100%) -->
           <path d="M 88.2 21.2 A 48 48 0 0 1 108 60" fill="none" stroke="#22c55e" stroke-width="11" stroke-linecap="butt" />
-          <!-- Aiguille pivotante -->
           <g transform="translate(60, 60) rotate(${angle})">
             <polygon points="-3,0 3,0 0,-40" fill="#0f172a" />
           </g>
@@ -849,6 +844,7 @@
       resultatsAdzunaEl.innerHTML = listeFiltree.map(offre => {
         const idx = offre.indexOriginal;
         const lang = offre._qualif.langueChoisie || "fr";
+        const sourceLabel = offre.source === "france_travail" ? "France Travail" : (offre.source || "Adzuna");
         return `
           <div class="offre">
             <div class="offre-gauge">
@@ -856,7 +852,7 @@
             </div>
             <div class="offre-body">
               <div class="offre-titre">${offre.poste}</div>
-              <div class="offre-meta">${offre.entreprise} — ${offre.localisation}</div>
+              <div class="offre-meta">${offre.entreprise} — ${offre.localisation} • <strong>${sourceLabel}</strong></div>
               <div class="offre-date">${formaterDatePublication(offre.date_publication)}</div>
               ${offre.description ? `<div class="offre-desc">${offre.description.slice(0, 260)}...</div>` : ""}
               <div style="margin-top: 10px;">
@@ -928,7 +924,7 @@
           lien_offre: offre.lien_offre || null,
           statut: "a_postuler",
           notes: offre.description ? offre.description.slice(0, 1000) : null,
-          source: "adzuna",
+          source: offre.source || "adzuna",
           score_match: offre._qualif.score,
           message_approche: offre._qualif.messageApproche
         });
@@ -941,32 +937,79 @@
     filtreDateEl.addEventListener("change", appliquerFiltresEtTri);
     triMatchingEl.addEventListener("change", appliquerFiltresEtTri);
 
+    async function rechercherFranceTravail(q, country) {
+      if (country && country !== "fr") return [];
+
+      try {
+        const res = await fetch(`/api/francetravail?q=${encodeURIComponent(q)}&motsCles=${encodeURIComponent(q)}`);
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          console.warn("Erreur /api/francetravail :", data.error || res.status);
+          return [];
+        }
+
+        const brutes = Array.isArray(data)
+          ? data
+          : (data.offres || data.resultats || data.items || []);
+
+        return brutes.map((item, idx) => ({
+          id: item.id || `ft-${idx}-${Date.now()}`,
+          source: "france_travail",
+          poste: item.poste || item.intitule || item.title || "(Poste sans titre)",
+          entreprise: (typeof item.entreprise === "string" ? item.entreprise : item.entreprise?.nom) || "(Entreprise non précisée)",
+          localisation: item.localisation || item.lieuTravail?.libelle || "France",
+          date_publication: item.date_publication || item.dateCreation || null,
+          description: item.description || "",
+          lien_offre: item.lien_offre || item.origineOffre?.urlOrigine || item.url || ""
+        }));
+      } catch (err) {
+        console.warn("Erreur réseau /api/francetravail :", err);
+        return [];
+      }
+    }
+
     formAdzuna.addEventListener("submit", async (e) => {
       e.preventDefault();
       const q = document.getElementById("adzuna-query").value.trim();
       const country = document.getElementById("adzuna-country").value;
 
-      afficherStatutAdzuna("Agent Veille en cours de recherche sur Adzuna...", "info");
+      afficherStatutAdzuna("Agent Veille en cours de recherche (Adzuna & France Travail)...", "info");
       resultatsAdzunaEl.innerHTML = "";
 
       try {
-        const res = await fetch(`/api/adzuna?q=${encodeURIComponent(q)}&country=${encodeURIComponent(country)}`);
-        const data = await res.json();
+        const [resAdzuna, offresFT] = await Promise.all([
+          fetch(`/api/adzuna?q=${encodeURIComponent(q)}&country=${encodeURIComponent(country)}`)
+            .then(async r => ({ ok: r.ok, status: r.status, data: await r.json().catch(() => ({})) })),
+          rechercherFranceTravail(q, country)
+        ]);
 
-        if (!res.ok) {
-          afficherStatutAdzuna("Erreur Adzuna : " + (data.error || res.status), "err");
+        if (!resAdzuna.ok && offresFT.length === 0) {
+          afficherStatutAdzuna("Erreur Adzuna : " + (resAdzuna.data.error || resAdzuna.status), "err");
           return;
         }
 
-        dernieresOffresAdzuna = (data.offres || []).map(offre => ({
+        const offresAdzuna = resAdzuna.ok
+          ? (resAdzuna.data.offres || []).map(o => ({ ...o, source: o.source || "adzuna" }))
+          : [];
+
+        const fusion = [...offresFT, ...offresAdzuna];
+
+        dernieresOffresAdzuna = fusion.map(offre => ({
           ...offre,
           _qualif: qualifierOffre(offre, country)
         }));
 
+        if (dernieresOffresAdzuna.length === 0) {
+          afficherStatutAdzuna("Aucune offre trouvée pour cette recherche.", "info");
+          majKPIs();
+          return;
+        }
+
         majKPIs();
         appliquerFiltresEtTri();
       } catch (err) {
-        afficherStatutAdzuna("Erreur réseau Adzuna : " + (err.message || err), "err");
+        afficherStatutAdzuna("Erreur réseau : " + (err.message || err), "err");
       }
     });
 
