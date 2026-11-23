@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Intranet — Candidatures, Adzuna & Agent Qualification</title>
+  <title>Intranet — Candidatures, Adzuna & Filtres</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 860px; margin: 32px auto; padding: 0 16px; background: #f6f8fa; color: #111827; }
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 32px auto; padding: 0 16px; background: #f6f8fa; color: #111827; }
     h1 { margin-bottom: 20px; }
     h2 { margin-top: 0; font-size: 1.15rem; }
     .card { background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px; }
@@ -21,6 +21,7 @@
     button.small { margin-top: 8px; margin-right: 8px; padding: 6px 10px; font-size: 0.9rem; }
     .row { display: flex; gap: 12px; flex-wrap: wrap; }
     .row > div { flex: 1 1 200px; }
+    .filtres-bar { margin-top: 14px; padding: 12px; background: #f1f5f9; border-radius: 6px; border: 1px solid #cbd5e1; }
     #message, #adzuna-status { margin-top: 12px; padding: 10px; border-radius: 4px; display: none; white-space: pre-wrap; }
     .ok { background: #dcfce7; color: #166534; display: block !important; }
     .err { background: #fee2e2; color: #991b1b; display: block !important; }
@@ -29,6 +30,7 @@
     .item:last-child, .offre:last-child { border-bottom: none; }
     .offre-titre { font-weight: bold; font-size: 1.02rem; }
     .offre-meta { color: #4b5563; font-size: 0.9rem; margin-top: 4px; }
+    .offre-date { color: #0f766e; font-size: 0.85rem; font-weight: bold; margin-top: 4px; }
     .offre-desc { color: #374151; font-size: 0.88rem; margin-top: 6px; }
     .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.8rem; font-weight: bold; margin-left: 8px; }
     .b-high { background: #dcfce7; color: #166534; }
@@ -40,11 +42,11 @@
   </style>
 </head>
 <body>
-  <h1>Intranet — Candidatures, Adzuna & Agent Qualification</h1>
+  <h1>Intranet — Candidatures, Adzuna & Filtres</h1>
 
   <!-- BLOC 1 : RECHERCHE ADZUNA -->
   <div class="card">
-    <h2>1. Rechercher et qualifier des offres via Adzuna</h2>
+    <h2>1. Rechercher, filtrer et qualifier des offres via Adzuna</h2>
     <form id="form-adzuna">
       <div class="row">
         <div>
@@ -63,6 +65,32 @@
       </div>
       <button type="submit" class="secondary">Rechercher sur Adzuna</button>
     </form>
+
+    <!-- BARRE DE FILTRES ET TRI -->
+    <div class="filtres-bar">
+      <div class="row">
+        <div>
+          <label for="filtre-date" style="margin-top:0;">Ancienneté de mise en ligne</label>
+          <select id="filtre-date">
+            <option value="all" selected>Toutes les dates</option>
+            <option value="24h">Offres de -24 heures</option>
+            <option value="3j">Offres de -3 jours</option>
+            <option value="7j">Offres de -7 jours</option>
+            <option value="30j">Offres de -30 jours</option>
+            <option value="plus30j">Offres &gt; 30 jours</option>
+          </select>
+        </div>
+        <div>
+          <label for="tri-matching" style="margin-top:0;">Ordre du matching</label>
+          <select id="tri-matching">
+            <option value="score_asc" selected>Matching croissant (du plus faible au plus fort)</option>
+            <option value="score_desc">Matching décroissant (du plus fort au plus faible)</option>
+            <option value="date_desc">Date de publication (plus récentes d'abord)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
     <div id="adzuna-status"></div>
     <div id="resultats-adzuna" style="margin-top: 14px;"></div>
   </div>
@@ -91,7 +119,7 @@
         <option value="entretien">Entretien</option>
       </select>
 
-      <label for="notes">Description / Notes (utilisées aussi pour le score)</label>
+      <label for="notes">Description / Notes</label>
       <textarea id="notes" rows="3" placeholder="Informations utiles, missions, secteur..."></textarea>
 
       <button type="submit">Enregistrer dans Supabase</button>
@@ -115,6 +143,8 @@
     const listeEl = document.getElementById("liste");
     const form = document.getElementById("form-candidature");
     const formAdzuna = document.getElementById("form-adzuna");
+    const filtreDateEl = document.getElementById("filtre-date");
+    const triMatchingEl = document.getElementById("tri-matching");
 
     let dernieresOffresAdzuna = [];
 
@@ -128,13 +158,9 @@
       adzunaStatus.className = type;
     }
 
-    if (!window.supabase || !window.supabase.createClient) {
-      afficherMessage("Erreur : la bibliothèque Supabase ne s'est pas chargée.", true);
-    }
-
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-    // AGENT DE QUALIFICATION NIVEAU 1 (Règles B2B Eau / Piscine / Direction / Export)
+    // AGENT DE QUALIFICATION NIVEAU 1
     function qualifierOffre(offre, pays = "fr") {
       const texte = `${offre.poste || ""} ${offre.entreprise || ""} ${offre.localisation || ""} ${offre.description || ""}`.toLowerCase();
       let score = 35;
@@ -181,6 +207,47 @@
       return `<span class="badge b-low">Score : ${score}/100</span>`;
     }
 
+    function formaterDatePublication(dateIso) {
+      if (!dateIso) return "Date de mise en ligne non précisée";
+      const d = new Date(dateIso);
+      if (isNaN(d.getTime())) return "Date de mise en ligne non précisée";
+
+      const diffMs = Date.now() - d.getTime();
+      const diffHeures = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffJours = Math.floor(diffHeures / 24);
+
+      let relatif = "";
+      if (diffHeures < 1) relatif = "il y a moins d'1 heure";
+      else if (diffHeures < 24) relatif = `il y a ${diffHeures} h`;
+      else if (diffJours === 1) relatif = "il y a 1 jour";
+      else relatif = `il y a ${diffJours} jours`;
+
+      const dateFormatee = d.toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+
+      return `Mise en ligne : ${dateFormatee} (${relatif})`;
+    }
+
+    function correspondFiltreDate(dateIso, filtre) {
+      if (filtre === "all") return true;
+      if (!dateIso) return false;
+      const d = new Date(dateIso);
+      if (isNaN(d.getTime())) return false;
+
+      const ageHeures = (Date.now() - d.getTime()) / (1000 * 60 * 60);
+      if (filtre === "24h") return ageHeures <= 24;
+      if (filtre === "3j") return ageHeures <= 24 * 3;
+      if (filtre === "7j") return ageHeures <= 24 * 7;
+      if (filtre === "30j") return ageHeures <= 24 * 30;
+      if (filtre === "plus30j") return ageHeures > 24 * 30;
+      return true;
+    }
+
     async function chargerCandidatures() {
       try {
         const { data, error } = await supabaseClient
@@ -205,7 +272,6 @@
             ${typeof row.score_match === "number" ? badgeScore(row.score_match) : ""}<br>
             <small>Statut : ${row.statut || "-"} | ${row.localisation || ""} | Source : ${row.source || "manuel"}</small>
             ${row.lien_offre ? `<br><small><a href="${row.lien_offre}" target="_blank" rel="noopener noreferrer">Voir l'offre</a></small>` : ""}
-            ${row.message_approche ? `<br><small><em>Message prêt :</em> ${row.message_approche}</small>` : ""}
           </div>
         `).join("");
       } catch (err) {
@@ -219,7 +285,6 @@
         .insert([payload]);
 
       if (error) {
-        // Repli si score_match ou message_approche n'existent pas encore dans la table
         if (error.message && (error.message.includes("score_match") || error.message.includes("message_approche"))) {
           const copie = { ...payload };
           delete copie.score_match;
@@ -263,54 +328,69 @@
       }
     });
 
-    function rendreOffresAdzuna(offres) {
-      if (!offres || offres.length === 0) {
-        resultatsAdzunaEl.innerHTML = "<p>Aucune offre trouvée pour ces critères.</p>";
+    function appliquerFiltresEtTri() {
+      const filtreDate = filtreDateEl.value;
+      const tri = triMatchingEl.value;
+
+      const listeFiltree = dernieresOffresAdzuna
+        .map((offre, indexOriginal) => ({ ...offre, indexOriginal }))
+        .filter(offre => correspondFiltreDate(offre.date_publication, filtreDate));
+
+      listeFiltree.sort((a, b) => {
+        if (tri === "score_asc") return a._qualif.score - b._qualif.score;
+        if (tri === "score_desc") return b._qualif.score - a._qualif.score;
+        if (tri === "date_desc") {
+          const da = a.date_publication ? new Date(a.date_publication).getTime() : 0;
+          const db = b.date_publication ? new Date(b.date_publication).getTime() : 0;
+          return db - da;
+        }
+        return 0;
+      });
+
+      if (dernieresOffresAdzuna.length > 0) {
+        afficherStatutAdzuna(
+          `${listeFiltree.length} offre(s) affichée(s) sur ${dernieresOffresAdzuna.length} trouvée(s).`,
+          "ok"
+        );
+      }
+
+      if (listeFiltree.length === 0) {
+        resultatsAdzunaEl.innerHTML = "<p>Aucune offre ne correspond à ce filtre de date.</p>";
         return;
       }
 
-      resultatsAdzunaEl.innerHTML = offres.map((offre, index) => `
+      resultatsAdzunaEl.innerHTML = listeFiltree.map(offre => `
         <div class="offre">
           <div class="offre-titre">
             ${offre.poste}
-            <span id="badge-${index}"></span>
+            ${badgeScore(offre._qualif.score)}
           </div>
           <div class="offre-meta">${offre.entreprise} — ${offre.localisation}</div>
+          <div class="offre-date">${formaterDatePublication(offre.date_publication)}</div>
           ${offre.description ? `<div class="offre-desc">${offre.description.slice(0, 240)}...</div>` : ""}
           <div style="margin-top: 8px;">
             ${offre.lien_offre ? `<a href="${offre.lien_offre}" target="_blank" rel="noopener noreferrer">Ouvrir l'annonce</a>` : ""}
-            <button type="button" class="qualif small" onclick="qualifierLigne(${index})">Qualifier (Agent Niveau 1)</button>
-            <button type="button" class="small" onclick="ajouterOffreAdzuna(${index})">Ajouter aux candidatures</button>
+            <button type="button" class="qualif small" onclick="basculerDetailQualif(${offre.indexOriginal})">Voir synthèse & message</button>
+            <button type="button" class="small" onclick="ajouterOffreAdzuna(${offre.indexOriginal})">Ajouter aux candidatures</button>
           </div>
-          <div id="qualif-${index}" style="display:none;"></div>
+          <div id="qualif-${offre.indexOriginal}" class="qualif-box" style="display:none;">
+            <div><strong>Synthèse :</strong> ${offre._qualif.synthese}</div>
+            <div style="margin-top: 6px;"><strong>Message d'approche proposé :</strong></div>
+            <textarea class="msg-out" rows="3" readonly>${offre._qualif.messageApproche}</textarea>
+          </div>
         </div>
       `).join("");
     }
 
-    window.qualifierLigne = function(index) {
-      const offre = dernieresOffresAdzuna[index];
-      if (!offre) return;
-      const pays = document.getElementById("adzuna-country").value;
-      const res = qualifierOffre(offre, pays);
-      offre._qualif = res;
-
-      document.getElementById(`badge-${index}`).innerHTML = badgeScore(res.score);
+    window.basculerDetailQualif = function(index) {
       const box = document.getElementById(`qualif-${index}`);
-      box.style.display = "block";
-      box.className = "qualif-box";
-      box.innerHTML = `
-        <div><strong>Synthèse :</strong> ${res.synthese}</div>
-        <div style="margin-top: 6px;"><strong>Message d'approche proposé :</strong></div>
-        <textarea class="msg-out" rows="3" readonly>${res.messageApproche}</textarea>
-      `;
+      if (!box) return;
+      box.style.display = box.style.display === "none" ? "block" : "none";
     };
 
     window.ajouterOffreAdzuna = async function(index) {
       const offre = dernieresOffresAdzuna[index];
       if (!offre) return;
-
-      const pays = document.getElementById("adzuna-country").value;
-      const qualif = offre._qualif || qualifierOffre(offre, pays);
 
       try {
         afficherStatutAdzuna("Ajout en cours dans Supabase...", "info");
@@ -322,14 +402,17 @@
           statut: "a_postuler",
           notes: offre.description ? offre.description.slice(0, 1000) : null,
           source: "adzuna",
-          score_match: qualif.score,
-          message_approche: qualif.messageApproche
+          score_match: offre._qualif.score,
+          message_approche: offre._qualif.messageApproche
         });
-        afficherStatutAdzuna(`Offre ajoutée : "${offre.poste}" (Score ${qualif.score}/100).`, "ok");
+        afficherStatutAdzuna(`Offre ajoutée : "${offre.poste}" (Score ${offre._qualif.score}/100).`, "ok");
       } catch (err) {
         afficherStatutAdzuna("Erreur ajout Adzuna : " + (err.message || err), "err");
       }
     };
+
+    filtreDateEl.addEventListener("change", appliquerFiltresEtTri);
+    triMatchingEl.addEventListener("change", appliquerFiltresEtTri);
 
     formAdzuna.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -348,9 +431,12 @@
           return;
         }
 
-        dernieresOffresAdzuna = data.offres || [];
-        afficherStatutAdzuna(`${dernieresOffresAdzuna.length} offre(s) récupérée(s).`, "ok");
-        rendreOffresAdzuna(dernieresOffresAdzuna);
+        dernieresOffresAdzuna = (data.offres || []).map(offre => ({
+          ...offre,
+          _qualif: qualifierOffre(offre, country)
+        }));
+
+        appliquerFiltresEtTri();
       } catch (err) {
         afficherStatutAdzuna("Erreur réseau Adzuna : " + (err.message || err), "err");
       }
