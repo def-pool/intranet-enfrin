@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cockpit Agents IA, Offres d'Emploi & Matching CVs</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" referrerpolicy="no-referrer"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -115,6 +116,9 @@
   </header>
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <section class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status">
+      <strong>Mode sécurisé :</strong> les anciennes offres de démonstration ont été retirées. Dans cette version, « Tout actualiser » recalcule le matching mais ne lance pas encore de recherche externe ni de synchronisation Gmail. Une annonce ne doit être marquée comme vérifiée qu'après contrôle de sa page exacte.
+    </section>
     <!-- INDICATEURS KPI -->
     <section aria-label="Indicateurs clés">
       <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
@@ -156,7 +160,7 @@
         <div>
           <h2 class="text-base sm:text-lg font-bold text-slate-900">Gestionnaire de CVs & Calcul Dynamique du Matching</h2>
           <p class="text-xs sm:text-sm text-slate-500">
-            Comparez les offres par rapport au meilleur CV automatique ou à un CV précis ; modifiez ou ajoutez vos profils et compétences clés
+            Trois CV de référence FR / EN / ES ; choisissez celui à comparer et validez la version adaptée avant chaque candidature
           </p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
@@ -288,7 +292,7 @@
           <div>
             <h2 class="text-base sm:text-lg font-bold text-slate-900">Agents IA de Veille, Qualification & Matching</h2>
             <p class="text-xs text-slate-500">
-              Aucune exécution automatique au chargement — lancez un agent individuel ou « Tout actualiser »
+              Périmètre visé : Europe entière, Royaume-Uni inclus. La recherche réelle dépend des connecteurs et clés API configurés ; elle n’est pas encore exhaustive.
             </p>
           </div>
           <button
@@ -533,6 +537,20 @@
           ></textarea>
         </div>
 
+        <div class="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 space-y-3">
+          <div>
+            <label for="cv-pdf-file" class="block text-xs font-semibold text-slate-700 mb-1">Importer le CV (PDF)</label>
+            <input id="cv-pdf-file" type="file" accept="application/pdf,.pdf" class="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-3 file:py-2 file:text-white" />
+            <p id="cv-pdf-status" class="text-xs text-slate-500 mt-1">Le texte extrait sera contrôlable et modifiable ci-dessous. Les PDF scannés nécessitent un OCR.</p>
+          </div>
+          <div>
+            <label for="cv-raw-text" class="block text-xs font-semibold text-slate-700 mb-1">Texte brut du CV (extrait du PDF ou complété manuellement)</label>
+            <textarea id="cv-raw-text" rows="8" placeholder="Importez un PDF ou collez ici le texte du CV..." class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            <p class="text-xs text-slate-500 mt-1">Si le texte contient des caractères incohérents, ne l'enregistrez pas : utilisez un PDF exporté depuis le document source ou un OCR fiable.</p>
+          </div>
+          <button type="button" id="btn-analyze-cv-text" class="px-3 py-2 rounded-lg bg-white border border-indigo-200 text-indigo-700 text-xs font-semibold hover:bg-indigo-100">Déduire la cible et les mots-clés du texte</button>
+        </div>
+
         <div>
           <label for="cv-summary" class="block text-xs font-semibold text-slate-700 mb-1">Résumé rapide du CV</label>
           <textarea
@@ -559,6 +577,30 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODALE VALIDATION DU CV AVANT CANDIDATURE -->
+  <div id="application-modal-backdrop" class="fixed inset-0 z-[60] hidden bg-slate-900/60 backdrop-blur-sm items-center justify-center p-3 sm:p-5 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="application-modal-title">
+    <div class="bg-white rounded-2xl max-w-4xl w-full border border-slate-200 shadow-2xl overflow-hidden my-auto">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+        <div><h3 id="application-modal-title" class="font-bold text-slate-900">Valider le CV pour cette candidature</h3><p id="application-job-label" class="text-xs text-slate-500 mt-1"></p></div>
+        <button type="button" id="btn-close-application-modal" class="p-2 rounded-lg hover:bg-slate-100" aria-label="Fermer">✕</button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">Vérifie la langue et le document. Le CV original ne sera pas écrasé. L'ouverture du site de candidature ne transmet pas automatiquement le fichier : tu devras le joindre sur le site du recruteur.</div>
+        <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4">
+          <div class="space-y-3">
+            <label for="application-cv-select" class="block text-xs font-semibold text-slate-700">CV à utiliser (suggestion automatique modifiable)</label>
+            <select id="application-cv-select" class="w-full rounded-xl border border-slate-300 p-3 text-sm"></select>
+            <p id="application-language-reason" class="text-xs text-slate-500"></p>
+            <label class="flex gap-2 items-start text-sm text-slate-700"><input id="application-cv-approved" type="checkbox" class="mt-1"> <span>J'ai relu et je valide ce CV pour cette candidature.</span></label>
+            <button id="btn-confirm-application" type="button" disabled class="w-full rounded-xl bg-sky-600 disabled:bg-slate-300 text-white font-semibold text-sm px-4 py-3">Valider le CV et ouvrir l'annonce</button>
+            <button id="btn-cancel-application" type="button" class="w-full rounded-xl border border-slate-300 text-slate-700 px-4 py-2 text-sm">Annuler</button>
+          </div>
+          <div class="min-h-[360px] border border-slate-200 rounded-xl overflow-hidden bg-slate-50"><iframe id="application-cv-preview" title="Aperçu du CV sélectionné" class="w-full h-[520px]" src="about:blank"></iframe></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -682,197 +724,41 @@
     };
 
     const DEFAULT_CVS = [
-      {
-        id: 'cv-product-tech',
-        name: 'CV Principal — Product / Ops / Tech',
-        headline: 'Product Manager • Support Technique & Commercial B2B',
-        skills: [
-          'product management',
-          'support technique',
-          'b2b',
-          'piscines',
-          'traitement de l\'eau',
-          'roadmap',
-          'relation client',
-          'anglais',
-          'espagnol',
-          'qualité'
-        ],
-        summary: 'Pilotage de gammes produits techniques, interface clients/distributeurs B2B, support niveau 2/3 et déploiement opérationnel.'
-      },
-      {
-        id: 'cv-data-ia',
-        name: 'CV Data & IA',
-        headline: 'Data & IA • Pilotage Produit, KPIs & Automatisation',
-        skills: [
-          'data',
-          'ia',
-          'analytics',
-          'kpi',
-          'automatisation',
-          'product management',
-          'sql',
-          'reporting',
-          'optimisation',
-          'anglais'
-        ],
-        summary: 'Structuration des indicateurs de performance, exploitation des données métier et intégration d\'agents / workflows IA.'
-      },
-      {
-        id: 'cv-management-conseil',
-        name: 'CV Management & Conseil',
-        headline: 'Conseil & Management • Structuration, Stratégie & Accompagnement',
-        skills: [
-          'conseil',
-          'management',
-          'stratégie',
-          'b2b',
-          'accompagnement',
-          'organisation',
-          'développement commercial',
-          'process',
-          'france',
-          'espagne'
-        ],
-        summary: 'Accompagnement opérationnel et stratégique des directions et équipes sur l\'organisation, l\'offre et la performance.'
-      }
+      { id: 'cv-damien-fr', name: 'CV Damien Enfrin — Français', language: 'fr', headline: 'Directeur commercial France & International | Business Development', skills: ['direction commerciale','sales director','head of sales','business development','B2B','export','Europe','EMEA','LATAM','distribution','channel management','P&L','management','OEM','MDD','industrie','hydraulique','pompage','traitement de l’eau','piscine','spa','HVAC','REACH','ACS','CE','anglais','espagnol'], summary: 'Direction commerciale et opérationnelle B2B, développement international, réseaux de distribution et produits techniques.' },
+      { id: 'cv-damien-en', name: 'CV Damien Enfrin — English', language: 'en', headline: 'Commercial Director France & International | Business Development', skills: ['commercial director','sales director','head of sales','business development','B2B sales','export','Europe','EMEA','LATAM','distribution networks','channel management','P&L','leadership','OEM','private label','industrial equipment','water treatment','pumping','HVAC','pools','spas','REACH','CE','French','Spanish'], summary: 'Commercial and operations leadership, international B2B growth, distribution networks and technical industrial products.' },
+      { id: 'cv-damien-es', name: 'CV Damien Enfrin — Español', language: 'es', headline: 'Director Comercial Francia e Internacional | Business Development', skills: ['dirección comercial','director comercial','desarrollo de negocio','ventas B2B','exportación','Europa','EMEA','LATAM','redes de distribución','channel management','P&L','management','OEM','marca blanca','equipamiento industrial','tratamiento de agua','bombeo','climatización','piscinas','spas','REACH','CE','francés','inglés'], summary: 'Dirección comercial y de operaciones, crecimiento B2B internacional, redes de distribución y productos técnicos industriales.' }
     ];
 
-    const DEFAULT_JOBS = [
-      {
-        id: 'job-1',
-        title: 'Product Manager & Responsable Support Technique B2B',
-        company: 'AquaTech Europe',
-        location: 'Occitanie / Hybride',
-        salary: '58k – 68k € • CDI',
-        status: 'À postuler',
-        source: 'Adzuna • Agent Veille Produit & Tech',
-        date: '2026-11-23',
-        url: 'https://www.adzuna.fr',
-        skills: ['product management', 'support technique', 'b2b', 'piscines', 'traitement de l\'eau', 'roadmap', 'anglais', 'espagnol'],
-        notes: 'Forte proximité avec la direction produit et les équipes support / distributeurs.'
-      },
-      {
-        id: 'job-2',
-        title: 'Responsable Data, Reporting & Automatisation Opérationnelle',
-        company: 'Fluxia Solutions',
-        location: 'Lyon / Télétravail hybride',
-        salary: '55k – 65k € • CDI',
-        status: 'Postulé',
-        source: 'LinkedIn • Agent Veille Data & IA',
-        date: '2026-11-20',
-        url: 'https://www.linkedin.com/jobs',
-        skills: ['data', 'ia', 'kpi', 'automatisation', 'reporting', 'sql', 'optimisation', 'anglais'],
-        notes: 'Candidature envoyée ; suivi des indicateurs de conversion et automatisation des flux.'
-      },
-      {
-        id: 'job-3',
-        title: 'Consultant Senior Organisation, Stratégie & Structuration B2B',
-        company: 'CapHorizon Conseil',
-        location: 'Full Remote / France & Espagne',
-        salary: '600 € / jour • Mission',
-        status: 'Entretien',
-        source: 'Malt / Apec • Agent Veille Conseil & Management',
-        date: '2026-11-18',
-        url: 'https://www.malt.fr',
-        skills: ['conseil', 'management', 'stratégie', 'b2b', 'accompagnement', 'organisation', 'process', 'espagne'],
-        notes: 'Entretien planifié avec l’associé responsable du pôle transformation opérationnelle.'
-      },
-      {
-        id: 'job-4',
-        title: 'Chef de Produit Équipements Hydrauliques & Relation Client',
-        company: 'HydraSud Industrie',
-        location: 'Perpignan / Déplacements',
-        salary: '50k – 58k € • CDI',
-        status: 'Relance à faire',
-        source: 'France Travail • Agent Veille Produit & Tech',
-        date: '2026-11-12',
-        url: 'https://candidat.francetravail.fr',
-        skills: ['product management', 'relation client', 'b2b', 'traitement de l\'eau', 'qualité', 'roadmap', 'espagnol'],
-        notes: 'Relancer le service recrutement cette semaine avec synthèse des réalisations produits.'
-      },
-      {
-        id: 'job-5',
-        title: 'Lead Product & Data Operations',
-        company: 'NovaMetric',
-        location: 'Paris / Hybride',
-        salary: '64k – 74k € • CDI',
-        status: 'Offre reçue',
-        source: 'Adzuna • Agent Veille Data & IA',
-        date: '2026-11-15',
-        url: 'https://www.adzuna.fr',
-        skills: ['product management', 'data', 'ia', 'kpi', 'automatisation', 'analytics', 'roadmap', 'anglais'],
-        notes: 'Proposition reçue, conditions de télétravail et périmètre en cours de validation.'
-      },
-      {
-        id: 'job-6',
-        title: 'Chargé de Projet Support & Documentation Technique',
-        company: 'BassinNord Services',
-        location: 'Lille / Sur site',
-        salary: '44k – 50k € • CDI',
-        status: 'Archivé',
-        source: 'Indeed • Agent Veille Produit & Tech',
-        date: '2026-11-04',
-        url: 'https://fr.indeed.com',
-        skills: ['support technique', 'relation client', 'qualité', 'process', 'b2b'],
-        notes: 'Archivé : éloignement géographique et périmètre trop restreint.'
-      }
-    ];
+    // Aucune offre fictive préchargée : seules les annonces réellement ajoutées/importées sont affichées.
+    const DEFAULT_JOBS = [];
 
     const DEFAULT_AGENTS = [
       {
         id: 'agent-1',
         name: 'Agent Veille Produit & Tech',
-        role: 'Scrute Adzuna, France Travail & portails B2B sur les métiers Produit, Support Technique & Eau/Piscine',
+        role: 'Veille multilingue des postes commerciaux et techniques sur les marchés européens, Royaume-Uni inclus ; qualification des liens directs.',
         keywords: ['product management', 'support technique', 'b2b', 'piscines', 'traitement de l\'eau'],
         status: 'En attente',
         lastRun: null,
-        candidateJob: {
-          title: 'Product Manager Technique & Support Clients B2B',
-          company: 'SolarPool Technologies',
-          location: 'Montpellier / Hybride',
-          salary: '56k – 66k € • CDI',
-          source: 'Adzuna • Agent Veille Produit & Tech',
-          url: 'https://www.adzuna.fr',
-          skills: ['product management', 'support technique', 'b2b', 'piscines', 'roadmap', 'relation client', 'anglais'],
-          notes: 'Nouvelle opportunité détectée lors de l’actualisation manuelle.'
-        }
+        candidateJob: null
       },
       {
         id: 'agent-2',
         name: 'Agent Veille Data & IA',
-        role: 'Identifie les postes Data, IA, KPIs et automatisation alignés avec votre profil analytique',
-        keywords: ['data', 'ia', 'kpi', 'automatisation', 'analytics'],
+        role: 'Recherche des postes de direction commerciale, export, développement de marchés et management B2B dans toute l’Europe.',
+        keywords: ['Commercial Director','Sales Director','Country Manager','Export Director','International Sales','Channel Director','EMEA'],
         status: 'En attente',
         lastRun: null,
-        candidateJob: {
-          title: 'Product Owner Data, Automatisation & Pilotage KPI',
-          company: 'ClarifyAI France',
-          location: 'Full Remote / France',
-          salary: '60k – 70k € • CDI',
-          source: 'Adzuna • Agent Veille Data & IA',
-          url: 'https://www.adzuna.fr',
-          skills: ['data', 'ia', 'kpi', 'automatisation', 'product management', 'reporting', 'anglais'],
-          notes: 'Poste orienté automatisation des processus et pilotage par la donnée.'
-        }
+        candidateJob: null
       },
       {
         id: 'agent-3',
         name: 'Agent Veille Conseil & Management',
-        role: 'Cible les missions de conseil, structuration organisationnelle et accompagnement B2B',
-        keywords: ['conseil', 'management', 'stratégie', 'accompagnement', 'organisation'],
+        role: 'Recherche les fonctions de direction des opérations, business development et conseil commercial en Europe et au Royaume-Uni.',
+        keywords: ['Operations Director','Business Development Director','General Manager','Commercial Strategy','B2B consulting','France','UK','Europe'],
         status: 'En attente',
         lastRun: null,
-        candidateJob: {
-          title: 'Manager Conseil & Structuration Opérationnelle B2B',
-          company: 'Altis Partners',
-          location: 'Toulouse / Hybride',
-          salary: '58k – 68k € • CDI',
-          source: 'LinkedIn • Agent Veille Conseil & Management',
-          url: 'https://www.linkedin.com/jobs',
-          skills: ['conseil', 'management', 'stratégie', 'b2b', 'accompagnement', 'organisation', 'process', 'espagne'],
-          notes: 'Mission d’accompagnement sur la structuration d’offres et d’équipes.'
-        }
+        candidateJob: null
       },
       {
         id: 'agent-4',
@@ -1005,7 +891,8 @@
         }
         const parsed = JSON.parse(raw);
         state.cvs = Array.isArray(parsed.cvs) && parsed.cvs.length ? parsed.cvs : structuredClone(DEFAULT_CVS);
-        state.jobs = Array.isArray(parsed.jobs) ? parsed.jobs : structuredClone(DEFAULT_JOBS);
+        if (state.cvs.some((cv) => ['cv-product-tech','cv-data-ia','cv-management-conseil'].includes(cv.id))) state.cvs = structuredClone(DEFAULT_CVS);
+        state.jobs = Array.isArray(parsed.jobs) ? parsed.jobs.filter((job) => !/^job-[1-6]$/.test(String(job?.id || ''))) : structuredClone(DEFAULT_JOBS);
         state.agents = Array.isArray(parsed.agents) && parsed.agents.length ? parsed.agents : structuredClone(DEFAULT_AGENTS);
         state.logs = Array.isArray(parsed.logs) ? parsed.logs : [];
         state.referenceCvMode = parsed.referenceCvMode || 'BEST_AUTO';
@@ -1197,7 +1084,7 @@
       } else {
         appendLog(
           agent.name,
-          `Analyse terminée sur ${state.jobs.length} offre(s) et ${state.cvs.length} CV(s). Score moyen global : ${avgScore}%.`,
+          `Recalcul des scores terminé sur ${state.jobs.length} offre(s) et ${state.cvs.length} CV(s). Aucune recherche externe ni vérification d'annonce n'a été lancée.`,
           'Terminé'
         );
       }
@@ -1223,7 +1110,7 @@
 
       document.getElementById('global-refresh-status').textContent = targetAgentId
         ? `Exécution de ${agentsToRun[0]?.name || 'l’agent IA'} en cours...`
-        : 'Actualisation de tous les agents IA et du matching CVs en cours...';
+        : 'Recalcul du matching des CVs en cours...';
 
       renderAgents();
       renderKPIs();
@@ -1235,14 +1122,14 @@
         const stamp = formatTimestamp(new Date());
         state.lastGlobalRefresh = stamp;
         document.getElementById('global-last-refresh').textContent = stamp;
-        document.getElementById('global-refresh-status').textContent = 'Actualisation terminée (mode manuel actif)';
+        document.getElementById('global-refresh-status').textContent = 'Recalcul terminé — recherche externe non connectée dans cette version';
 
         saveState();
         renderAll();
         showToast(
           targetAgentId
             ? `Agent « ${agentsToRun[0]?.name} » actualisé.`
-            : 'Tous les agents IA et scores de matching ont été actualisés.',
+            : 'Scores de matching recalculés. Aucune recherche externe n’a été effectuée.',
           'success'
         );
       } catch (err) {
@@ -1576,14 +1463,7 @@
                   <div class="w-full flex flex-wrap items-center gap-1.5 pt-0.5">
                     ${
                       safeUrl
-                        ? `<a
-                            href="${escapeHTML(safeUrl)}"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="flex-1 inline-flex items-center justify-center gap-1 px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-2xs transition"
-                          >
-                            Postuler →
-                          </a>`
+                        ? `<button type="button" data-apply-job="${escapeHTML(job.id)}" class="flex-1 inline-flex items-center justify-center gap-1 px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-2xs transition">Postuler →</button>`
                         : `<button
                             type="button"
                             data-edit-job="${escapeHTML(job.id)}"
@@ -1761,7 +1641,9 @@
       document.getElementById('job-title').focus();
     }
 
+    let pendingCvPdfData = null;
     function openCvModal(cv = null) {
+      pendingCvPdfData = cv?.pdfDataUri || null;
       document.getElementById('form-cv').reset();
       if (cv) {
         document.getElementById('cv-modal-title').textContent = 'Modifier le CV';
@@ -1770,6 +1652,7 @@
         document.getElementById('cv-headline').value = cv.headline || '';
         document.getElementById('cv-skills').value = (cv.skills || []).join(', ');
         document.getElementById('cv-summary').value = cv.summary || '';
+        document.getElementById('cv-raw-text').value = cv.rawText || '';
       } else {
         document.getElementById('cv-modal-title').textContent = 'Ajouter un nouveau CV';
         document.getElementById('cv-id').value = '';
@@ -1800,7 +1683,135 @@
     // =========================================================================
     // ÉCOUTEURS D'ÉVÉNEMENTS
     // =========================================================================
+    function inferCvFieldsFromText() {
+      const raw = document.getElementById('cv-raw-text').value || '';
+      const text = normalizeToken(raw);
+      if (text.length < 80) {
+        showToast('Ajoutez un texte de CV suffisamment complet avant de lancer l’analyse.', 'error');
+        return;
+      }
+      const profiles = [
+        { title: 'Product Manager / Chef de Produit', terms: ['product manager','chef de produit','roadmap','product owner','strategie produit','gestion de produit','lancement produit'] },
+        { title: 'Management de projets / Opérations', terms: ['gestion de projet','pilotage operationnel','management','amelioration continue','process','coordination','transformation'] },
+        { title: 'Développement commercial B2B', terms: ['developpement commercial','commercial b2b','negociation','grands comptes','prospection','chiffre affaires','relation client'] },
+        { title: 'Support technique / Expertise produit', terms: ['support technique','sav','assistance technique','formation technique','diagnostic','qualite','documentation technique'] },
+        { title: 'Data / Reporting / Automatisation', terms: ['data','business intelligence','power bi','sql','reporting','kpi','automatisation','analytics'] }
+      ];
+      const ranked = profiles.map(p => ({...p, score:p.terms.reduce((n,t)=>n+(text.includes(normalizeToken(t))?1:0),0)})).sort((a,b)=>b.score-a.score);
+      const best = ranked[0];
+      const vocabulary = ['product management','product owner','roadmap','gestion de projet','pilotage opérationnel','management','développement commercial','B2B','négociation','grands comptes','support technique','SAV','qualité','formation','relation client','data','Power BI','SQL','KPI','reporting','automatisation','amélioration continue','coordination','budget','fournisseurs','industrie','anglais','espagnol'];
+      const detected = vocabulary.filter(term => text.includes(normalizeToken(term)));
+      if (best && best.score > 0) document.getElementById('cv-headline').value = best.title;
+      if (detected.length) {
+        const existing = parseCommaList(document.getElementById('cv-skills').value);
+        document.getElementById('cv-skills').value = [...new Set([...detected, ...existing])].join(', ');
+      }
+      if (!document.getElementById('cv-summary').value.trim()) {
+        const sentences = raw.replace(/\s+/g,' ').split(/(?<=[.!?])\s+/).filter(x => x.length > 45);
+        document.getElementById('cv-summary').value = sentences.slice(0,2).join(' ').slice(0,500);
+      }
+      showToast(`Analyse terminée : cible proposée${best?.score ? ` (${best.title})` : ''}, ${detected.length} mot(s)-clé(s) détecté(s). Vérifiez et corrigez les suggestions.`, 'success');
+    }
+
+    async function extractPdfText(file) {
+      const status = document.getElementById('cv-pdf-status');
+      if (!file || file.type !== 'application/pdf') {
+        status.textContent = 'Veuillez sélectionner un fichier PDF.';
+        return;
+      }
+      if (!window.pdfjsLib) {
+        status.textContent = 'Le moteur PDF est indisponible. Vous pouvez coller le texte manuellement.';
+        return;
+      }
+      status.textContent = 'Extraction du texte PDF en cours…';
+      try {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        const bytes = await file.arrayBuffer();
+        const pdf = await window.pdfjsLib.getDocument({data: bytes}).promise;
+        const pages = [];
+        for (let pageNo = 1; pageNo <= pdf.numPages; pageNo++) {
+          const page = await pdf.getPage(pageNo);
+          const content = await page.getTextContent();
+          const lines = [];
+          let lastY = null;
+          for (const item of content.items) {
+            if (!item.str) continue;
+            const y = item.transform?.[5];
+            if (lastY !== null && y !== undefined && Math.abs(y-lastY) > 3) lines.push('\n');
+            lines.push(item.str);
+            lines.push(' ');
+            if (y !== undefined) lastY = y;
+          }
+          pages.push(lines.join('').replace(/[ \t]+\n/g,'\n').trim());
+        }
+        const extracted = pages.join('\n\n').replace(/\u0000/g,'').trim();
+        document.getElementById('cv-raw-text').value = extracted;
+        const replacement = (extracted.match(/�/g) || []).length;
+        if (extracted.length < 100 || replacement > Math.max(3, extracted.length * 0.01)) {
+          status.textContent = 'Extraction incomplète ou encodage suspect. Ce PDF semble scanné/protégé ou mal encodé : vérifiez le texte et utilisez un OCR si nécessaire.';
+        } else {
+          status.textContent = `Extraction terminée : ${pdf.numPages} page(s), ${extracted.length.toLocaleString('fr-FR')} caractères. Cliquez sur « Déduire la cible… » pour obtenir des suggestions.`;
+        }
+      } catch (error) {
+        console.error('PDF extraction error:', error);
+        status.textContent = 'Impossible de lire ce PDF. Essayez un PDF texte non protégé ou collez le texte manuellement.';
+      }
+    }
+
+    let pendingApplicationJobId = null;
+    function suggestedCvLanguage(job) {
+      const text = normalizeToken(`${job.location || ''} ${job.title || ''} ${job.notes || ''}`);
+      if (/united kingdom|\buk\b|london|manchester|birmingham|scotland|england|wales|ireland/.test(text)) return 'en';
+      if (/espana|spain|barcelona|madrid|valencia|portugal|mexico|chile|argentina/.test(text)) return 'es';
+      if (/france|paris|lyon|marseille|perpignan|belgique|belgium|suisse|switzerland|luxembourg/.test(text)) return 'fr';
+      return 'en';
+    }
+    function showApplicationModal(job) {
+      if (!job || !sanitizeUrl(job.url || '')) { showToast('Lien direct de candidature manquant ou invalide.', 'error'); return; }
+      pendingApplicationJobId = job.id;
+      const suggested = suggestedCvLanguage(job);
+      const select = document.getElementById('application-cv-select');
+      select.innerHTML = state.cvs.map(cv => `<option value="${escapeHTML(cv.id)}">${escapeHTML(cv.name)}</option>`).join('');
+      const selected = state.cvs.find(cv => cv.language === suggested) || state.cvs.find(cv => cv.language === 'en') || state.cvs[0];
+      if (selected) select.value = selected.id;
+      document.getElementById('application-job-label').textContent = `${job.title} — ${job.company} (${job.location || 'lieu non précisé'})`;
+      document.getElementById('application-language-reason').textContent = `Suggestion : ${suggested.toUpperCase()} selon le pays / les indices de l’annonce. Tu peux choisir une autre langue.`;
+      document.getElementById('application-cv-approved').checked = false;
+      document.getElementById('application-cv-approved').disabled = !selected?.pdfDataUri;
+      document.getElementById('btn-confirm-application').disabled = true;
+      updateApplicationPreview();
+      toggleModal('application-modal-backdrop', true);
+    }
+    function updateApplicationPreview() {
+      const cv = state.cvs.find(item => item.id === document.getElementById('application-cv-select').value);
+      document.getElementById('application-cv-preview').src = cv?.pdfDataUri || 'about:blank';
+      document.getElementById('application-cv-preview').title = cv?.pdfDataUri ? `Aperçu du ${cv.name}` : 'PDF non encore importé pour ce profil';
+      document.getElementById('application-cv-approved').disabled = !cv?.pdfDataUri;
+      document.getElementById('application-language-reason').textContent = cv?.pdfDataUri ? `Document chargé : ${cv.name}. Vérifie-le avant validation.` : `Le PDF de ce profil n’est pas encore importé. Ouvre Gestionnaire de CVs, modifie ce profil et importe son PDF original avant de postuler.`;
+    }
+    function confirmApplication() {
+      const job = state.jobs.find(item => item.id === pendingApplicationJobId);
+      const cv = state.cvs.find(item => item.id === document.getElementById('application-cv-select').value);
+      const url = sanitizeUrl(job?.url || '');
+      if (!job || !cv || !cv.pdfDataUri || !url || !document.getElementById('application-cv-approved').checked) { showToast('Importe et vérifie le PDF du CV sélectionné avant de continuer.', 'error'); return; }
+      appendLog('Validation CV', `CV « ${cv.name} » validé manuellement pour « ${job.title} » ; ouverture du site recruteur.`, 'Terminé');
+      saveState();
+      toggleModal('application-modal-backdrop', false);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      showToast(`CV ${cv.language.toUpperCase()} validé. Joins le PDF sur le site du recruteur.`, 'success');
+      pendingApplicationJobId = null;
+    }
+
     function bindEvents() {
+      document.getElementById('cv-pdf-file').addEventListener('change', (event) => { const file = event.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onload = () => { pendingCvPdfData = String(reader.result || ''); }; reader.readAsDataURL(file); } extractPdfText(file); });
+      document.getElementById('btn-analyze-cv-text').addEventListener('click', inferCvFieldsFromText);
+      document.getElementById('application-cv-select').addEventListener('change', () => { updateApplicationPreview(); document.getElementById('application-cv-approved').checked = false; document.getElementById('btn-confirm-application').disabled = true; });
+      document.getElementById('application-cv-approved').addEventListener('change', (e) => { document.getElementById('btn-confirm-application').disabled = !e.target.checked; });
+      document.getElementById('btn-confirm-application').addEventListener('click', confirmApplication);
+      document.getElementById('btn-cancel-application').addEventListener('click', () => toggleModal('application-modal-backdrop', false));
+      document.getElementById('btn-close-application-modal').addEventListener('click', () => toggleModal('application-modal-backdrop', false));
+      document.getElementById('application-modal-backdrop').addEventListener('click', (e) => { if (e.target.id === 'application-modal-backdrop') toggleModal('application-modal-backdrop', false); });
+
       // Bouton principal "Tout actualiser" (strictement sur clic)
       document.getElementById('btn-refresh-all').addEventListener('click', () => runAgents(null));
 
@@ -1901,7 +1912,10 @@
           name: document.getElementById('cv-name').value.trim(),
           headline: document.getElementById('cv-headline').value.trim(),
           skills,
-          summary: document.getElementById('cv-summary').value.trim()
+          summary: document.getElementById('cv-summary').value.trim(),
+          rawText: document.getElementById('cv-raw-text').value.trim(),
+          language: existingId === 'cv-damien-fr' ? 'fr' : existingId === 'cv-damien-en' ? 'en' : existingId === 'cv-damien-es' ? 'es' : 'fr',
+          pdfDataUri: pendingCvPdfData || state.cvs.find(c => c.id === existingId)?.pdfDataUri || null
         };
 
         if (existingId) {
@@ -2030,6 +2044,8 @@
       });
 
       jobsListEl.addEventListener('click', (e) => {
+        const applyBtn = e.target.closest('[data-apply-job]');
+        if (applyBtn) { const job = state.jobs.find((j) => j.id === applyBtn.dataset.applyJob); if (job) showApplicationModal(job); return; }
         const copyBtn = e.target.closest('[data-copy-url]');
         if (copyBtn) {
           const job = state.jobs.find((j) => j.id === copyBtn.dataset.copyUrl);
