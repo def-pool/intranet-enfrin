@@ -594,7 +594,10 @@
             <label for="application-cv-select" class="block text-xs font-semibold text-slate-700">CV à utiliser (suggestion automatique modifiable)</label>
             <select id="application-cv-select" class="w-full rounded-xl border border-slate-300 p-3 text-sm"></select>
             <p id="application-language-reason" class="text-xs text-slate-500"></p>
-            <label class="flex gap-2 items-start text-sm text-slate-700"><input id="application-cv-approved" type="checkbox" class="mt-1"> <span>J'ai relu et je valide ce CV pour cette candidature.</span></label>
+            <label for="application-cv-file" class="block text-xs font-semibold text-slate-700">Joindre le PDF correspondant à ce CV (si nécessaire)</label>
+            <input id="application-cv-file" type="file" accept="application/pdf,.pdf" class="block w-full text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-sky-50 file:px-3 file:py-2 file:text-sky-700">
+            <p id="application-cv-file-status" class="text-xs text-slate-500">Le PDF doit être chargé pour activer la validation.</p>
+            <label class="flex gap-2 items-start text-sm text-slate-700"><input id="application-cv-approved" type="checkbox" class="mt-1" disabled> <span>J'ai relu et je valide ce CV pour cette candidature.</span></label>
             <button id="btn-confirm-application" type="button" disabled class="w-full rounded-xl bg-sky-600 disabled:bg-slate-300 text-white font-semibold text-sm px-4 py-3">Valider le CV et ouvrir l'annonce</button>
             <button id="btn-cancel-application" type="button" class="w-full rounded-xl border border-slate-300 text-slate-700 px-4 py-2 text-sm">Annuler</button>
           </div>
@@ -1463,14 +1466,8 @@
                   <div class="w-full flex flex-wrap items-center gap-1.5 pt-0.5">
                     ${
                       safeUrl
-                        ? `<button type="button" data-apply-job="${escapeHTML(job.id)}" class="flex-1 inline-flex items-center justify-center gap-1 px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-2xs transition">Postuler →</button>`
-                        : `<button
-                            type="button"
-                            data-edit-job="${escapeHTML(job.id)}"
-                            class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold transition cursor-pointer"
-                          >
-                            Ajouter lien
-                          </button>`
+                        ? `<a href="${escapeHTML(safeUrl)}" target="_blank" rel="noopener noreferrer" class="flex-1 inline-flex items-center justify-center gap-1 px-3.5 py-2 rounded-xl border border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-bold transition">Voir l'annonce ↗</a><button type="button" data-apply-job="${escapeHTML(job.id)}" class="flex-1 inline-flex items-center justify-center gap-1 px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-2xs transition">Préparer ma candidature →</button>`
+                        : `<button type="button" data-edit-job="${escapeHTML(job.id)}" class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold transition cursor-pointer">Ajouter lien</button>`
                     }
 
                     <button
@@ -1767,7 +1764,7 @@
       return 'en';
     }
     function showApplicationModal(job) {
-      if (!job || !sanitizeUrl(job.url || '')) { showToast('Lien direct de candidature manquant ou invalide.', 'error'); return; }
+      if (!job || !sanitizeUrl(job.url || '')) { showToast('Lien direct de candidature manquant ou invalide. Modifie cette offre et ajoute son URL exacte.', 'error'); return; }
       pendingApplicationJobId = job.id;
       const suggested = suggestedCvLanguage(job);
       const select = document.getElementById('application-cv-select');
@@ -1776,37 +1773,69 @@
       if (selected) select.value = selected.id;
       document.getElementById('application-job-label').textContent = `${job.title} — ${job.company} (${job.location || 'lieu non précisé'})`;
       document.getElementById('application-language-reason').textContent = `Suggestion : ${suggested.toUpperCase()} selon le pays / les indices de l’annonce. Tu peux choisir une autre langue.`;
+      document.getElementById('application-cv-file').value = '';
       document.getElementById('application-cv-approved').checked = false;
-      document.getElementById('application-cv-approved').disabled = !selected?.pdfDataUri;
       document.getElementById('btn-confirm-application').disabled = true;
       updateApplicationPreview();
       toggleModal('application-modal-backdrop', true);
     }
     function updateApplicationPreview() {
       const cv = state.cvs.find(item => item.id === document.getElementById('application-cv-select').value);
-      document.getElementById('application-cv-preview').src = cv?.pdfDataUri || 'about:blank';
-      document.getElementById('application-cv-preview').title = cv?.pdfDataUri ? `Aperçu du ${cv.name}` : 'PDF non encore importé pour ce profil';
-      document.getElementById('application-cv-approved').disabled = !cv?.pdfDataUri;
-      document.getElementById('application-language-reason').textContent = cv?.pdfDataUri ? `Document chargé : ${cv.name}. Vérifie-le avant validation.` : `Le PDF de ce profil n’est pas encore importé. Ouvre Gestionnaire de CVs, modifie ce profil et importe son PDF original avant de postuler.`;
+      const preview = document.getElementById('application-cv-preview');
+      preview.src = cv?.pdfDataUri || 'about:blank';
+      preview.title = cv?.pdfDataUri ? `Aperçu du ${cv.name}` : 'PDF non encore importé pour ce profil';
+      const hasPdf = Boolean(cv?.pdfDataUri);
+      const approved = document.getElementById('application-cv-approved');
+      approved.disabled = !hasPdf;
+      if (!hasPdf) approved.checked = false;
+      document.getElementById('application-cv-file-status').textContent = hasPdf
+        ? `PDF chargé pour ${cv.name}. Vérifie l'aperçu avant de cocher la validation.`
+        : `Aucun PDF associé à ${cv?.name || 'ce profil'} : importe-le ci-dessus.`;
+      document.getElementById('application-language-reason').textContent = hasPdf
+        ? `Document prêt : ${cv.name}. Tu peux aussi changer de langue.`
+        : `Suggestion : ${cv?.language?.toUpperCase() || '—'}. Le PDF correspondant doit être chargé avant validation.`;
+      document.getElementById('btn-confirm-application').disabled = !(hasPdf && approved.checked);
     }
     function confirmApplication() {
       const job = state.jobs.find(item => item.id === pendingApplicationJobId);
       const cv = state.cvs.find(item => item.id === document.getElementById('application-cv-select').value);
       const url = sanitizeUrl(job?.url || '');
-      if (!job || !cv || !cv.pdfDataUri || !url || !document.getElementById('application-cv-approved').checked) { showToast('Importe et vérifie le PDF du CV sélectionné avant de continuer.', 'error'); return; }
-      appendLog('Validation CV', `CV « ${cv.name} » validé manuellement pour « ${job.title} » ; ouverture du site recruteur.`, 'Terminé');
+      if (!job || !cv || !cv.pdfDataUri || !url || !document.getElementById('application-cv-approved').checked) {
+        showToast('Charge le PDF, relis-le et coche la validation avant de continuer.', 'error'); return;
+      }
+      appendLog('Validation CV', `CV « ${cv.name} » validé manuellement pour « ${job.title} » ; ouverture de l'annonce.`, 'Terminé');
       saveState();
+      const opened = window.open(url, '_blank', 'noopener,noreferrer');
       toggleModal('application-modal-backdrop', false);
-      window.open(url, '_blank', 'noopener,noreferrer');
-      showToast(`CV ${cv.language.toUpperCase()} validé. Joins le PDF sur le site du recruteur.`, 'success');
+      showToast(opened ? `CV ${cv.language.toUpperCase()} validé. Joins le PDF sur le site du recruteur.` : 'Le navigateur a bloqué la fenêtre. Utilise « Voir l’annonce » sur la fiche.', opened ? 'success' : 'error');
       pendingApplicationJobId = null;
     }
 
     function bindEvents() {
       document.getElementById('cv-pdf-file').addEventListener('change', (event) => { const file = event.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onload = () => { pendingCvPdfData = String(reader.result || ''); }; reader.readAsDataURL(file); } extractPdfText(file); });
       document.getElementById('btn-analyze-cv-text').addEventListener('click', inferCvFieldsFromText);
-      document.getElementById('application-cv-select').addEventListener('change', () => { updateApplicationPreview(); document.getElementById('application-cv-approved').checked = false; document.getElementById('btn-confirm-application').disabled = true; });
-      document.getElementById('application-cv-approved').addEventListener('change', (e) => { document.getElementById('btn-confirm-application').disabled = !e.target.checked; });
+      document.getElementById('application-cv-select').addEventListener('change', () => { document.getElementById('application-cv-approved').checked = false; updateApplicationPreview(); });
+      document.getElementById('application-cv-file').addEventListener('change', (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) { showToast('Sélectionne un fichier PDF.', 'error'); event.target.value = ''; return; }
+        if (file.size > 8 * 1024 * 1024) { showToast('Le PDF dépasse 8 Mo. Réduis sa taille avant import.', 'error'); event.target.value = ''; return; }
+        const cv = state.cvs.find(item => item.id === document.getElementById('application-cv-select').value);
+        if (!cv) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          cv.pdfDataUri = String(reader.result || '');
+          document.getElementById('application-cv-approved').checked = false;
+          saveState(); updateApplicationPreview();
+          showToast(`PDF chargé pour ${cv.name}. Relis-le puis coche la validation.`, 'success');
+        };
+        reader.onerror = () => showToast('Impossible de lire ce PDF. Réessaie.', 'error');
+        reader.readAsDataURL(file);
+      });
+      document.getElementById('application-cv-approved').addEventListener('change', () => {
+        const cv = state.cvs.find(item => item.id === document.getElementById('application-cv-select').value);
+        document.getElementById('btn-confirm-application').disabled = !(cv?.pdfDataUri && document.getElementById('application-cv-approved').checked);
+      });
       document.getElementById('btn-confirm-application').addEventListener('click', confirmApplication);
       document.getElementById('btn-cancel-application').addEventListener('click', () => toggleModal('application-modal-backdrop', false));
       document.getElementById('btn-close-application-modal').addEventListener('click', () => toggleModal('application-modal-backdrop', false));
