@@ -1497,7 +1497,7 @@
                     ${
                       safeUrl
                         ? `<a href="${escapeHTML(safeUrl)}" target="_blank" rel="noopener noreferrer" class="flex-1 inline-flex items-center justify-center gap-1 px-3.5 py-2 rounded-xl border border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-bold transition">Voir l'annonce ↗</a><button type="button" data-apply-job="${escapeHTML(job.id)}" class="flex-1 inline-flex items-center justify-center gap-1 px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-2xs transition">Préparer ma candidature →</button>`
-                        : `<button type="button" data-edit-job="${escapeHTML(job.id)}" class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold transition cursor-pointer">Ajouter lien</button>`
+                        : `<button type="button" disabled aria-disabled="true" title="Lien individuel absent ou non reconnu : l'agent doit retrouver l'URL de l'annonce" class="flex-1 inline-flex items-center justify-center gap-1 px-3.5 py-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-bold cursor-not-allowed">Voir l'annonce — lien manquant</button><button type="button" data-edit-job="${escapeHTML(job.id)}" class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold transition cursor-pointer">Ajouter lien</button>`
                     }
 
                     <button
