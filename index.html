@@ -117,7 +117,7 @@
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
     <section class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status">
-      <strong>Mode sécurisé :</strong> les anciennes offres de démonstration ont été retirées. Dans cette version, « Tout actualiser » recalcule le matching mais ne lance pas encore de recherche externe ni de synchronisation Gmail. Une annonce ne doit être marquée comme vérifiée qu'après contrôle de sa page exacte.
+      <strong>Mode sécurisé :</strong> les anciennes offres de démonstration ont été retirées. La recherche Adzuna Europe est disponible après configuration des clés API dans Vercel ; la synchronisation Gmail reste à connecter. Une annonce ne doit être marquée comme vérifiée qu'après contrôle de sa page exacte.
     </section>
     <!-- INDICATEURS KPI -->
     <section aria-label="Indicateurs clés">
@@ -855,7 +855,7 @@
         } else if (host.endsWith('glassdoor.com') || host.endsWith('glassdoor.co.uk') || host.endsWith('glassdoor.fr')) {
           if (!/\/job-listing\//i.test(parsed.pathname) && !/\/Job\//i.test(parsed.pathname)) return '';
         } else if (host.endsWith('adzuna.com') || host.startsWith('adzuna.')) {
-          if (!/\/details\/[^/]+/i.test(parsed.pathname)) return '';
+          if (!(/^\/jobs\/land\/ad\/[^/]+/i.test(parsed.pathname) || /^\/details\/[^/]+/i.test(parsed.pathname))) return '';
         } else if (host.endsWith('reed.co.uk')) {
           if (!/^\/jobs\/.+\/\d+/i.test(parsed.pathname)) return '';
         } else if (host.endsWith('monster.com') || host.endsWith('monster.co.uk')) {
@@ -1078,102 +1078,117 @@
       }
     }
 
-    function executeSingleAgentSync(agent) {
-      const nowStr = formatTimestamp(new Date());
-      agent.status = 'Terminé';
-      agent.lastRun = nowStr;
+    function buildAdzunaSearchTerms() {
+      // Requêtes ciblées, volontairement limitées pour éviter de saturer le quota API.
+      return [
+        'Commercial Director Sales Director Head of Sales',
+        'Business Development Director Country Manager Export Director',
+        'Operations Director General Manager Commercial Manager'
+      ];
+    }
 
-      let addedCount = 0;
-      if (agent.candidateJob) {
-        const exists = state.jobs.some(
-          (j) =>
-            normalizeToken(j.title) === normalizeToken(agent.candidateJob.title) &&
-            normalizeToken(j.company) === normalizeToken(agent.candidateJob.company)
-        );
-        if (!exists) {
-          const newJob = {
-            ...agent.candidateJob,
-            id: `job-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-            status: 'À postuler',
-            date: new Date().toISOString().slice(0, 10)
-          };
-          state.jobs.unshift(newJob);
-          addedCount = 1;
+    function adzunaSalary(job) {
+      if (job.salary_min == null && job.salary_max == null) return '';
+      const min = job.salary_min != null ? Math.round(job.salary_min).toLocaleString('fr-FR') : '';
+      const max = job.salary_max != null ? Math.round(job.salary_max).toLocaleString('fr-FR') : '';
+      return `${min}${min && max ? ' – ' : ''}${max} (estimation/source Adzuna)`;
+    }
+
+    async function fetchAdzunaCountryQuery(country, query) {
+      const endpoint = `/api/adzuna?country=${encodeURIComponent(country)}&q=${encodeURIComponent(query)}&page=1`;
+      const response = await fetch(endpoint, { headers: { Accept: 'application/json' } });
+      let payload = {};
+      try { payload = await response.json(); } catch (_) {}
+      if (!response.ok) throw new Error(payload.error || `Erreur Adzuna HTTP ${response.status} (${country})`);
+      return Array.isArray(payload.offres) ? payload.offres : [];
+    }
+
+    async function runAdzunaSearch(agent) {
+      const countries = ['gb','fr','de','nl','be','at','ch','it','es','pl','se','no','dk','ie','pt'];
+      const queries = buildAdzunaSearchTerms();
+      const tasks = countries.flatMap(country => queries.map(query => ({ country, query })));
+      const allResults = [];
+      const errors = [];
+      let cursor = 0;
+      const worker = async () => {
+        while (cursor < tasks.length) {
+          const task = tasks[cursor++];
+          try {
+            const rows = await fetchAdzunaCountryQuery(task.country, task.query);
+            allResults.push(...rows);
+          } catch (error) {
+            errors.push(`${task.country}/${task.query}: ${error.message}`);
+          }
         }
-      }
+      };
+      await Promise.all(Array.from({ length: 5 }, () => worker()));
 
-      const evaluatedJobs = state.jobs.map((j) => ({ job: j, match: evaluateJobMatching(j) }));
-      const avgScore =
-        evaluatedJobs.length > 0
-          ? Math.round(evaluatedJobs.reduce((acc, cur) => acc + cur.match.score, 0) / evaluatedJobs.length)
-          : 0;
-
-      if (addedCount > 0) {
-        appendLog(
-          agent.name,
-          `Offre « ${agent.candidateJob.title} » (${agent.candidateJob.company}) ajoutée et scorée. Score moyen global : ${avgScore}%.`,
-          'Terminé'
-        );
-      } else {
-        appendLog(
-          agent.name,
-          `Recalcul des scores terminé sur ${state.jobs.length} offre(s) et ${state.cvs.length} CV(s). Aucune recherche externe ni vérification d'annonce n'a été lancée.`,
-          'Terminé'
-        );
+      const seen = new Set();
+      let added = 0;
+      for (const item of allResults) {
+        const url = sanitizeUrl(item.url || '');
+        if (!url || !item.id_source) continue;
+        const key = `adzuna:${item.country}:${item.id_source}`;
+        if (seen.has(key) || state.jobs.some(job => job.externalId === key || (normalizeToken(job.title) === normalizeToken(item.title) && normalizeToken(job.company) === normalizeToken(item.company)))) continue;
+        seen.add(key);
+        const job = {
+          id: `adzuna-${item.country}-${item.id_source}`,
+          externalId: key,
+          title: item.title,
+          company: item.company,
+          location: item.location,
+          salary: adzunaSalary(item),
+          source: `Adzuna • ${item.country.toUpperCase()} • ${agent?.name || 'Veille Europe'}`,
+          url,
+          notes: `${String(item.description || '').slice(0, 900)}\nAnnonce remontée par Adzuna. Lien individuel de redirection Adzuna ; disponibilité finale à confirmer sur le site recruteur.`,
+          skills: (agent?.keywords || []).slice(0, 12),
+          status: 'À postuler',
+          date: item.created ? String(item.created).slice(0, 10) : new Date().toISOString().slice(0, 10),
+          adzunaCountry: item.country,
+          linkVerification: item.link_status || 'not_verified'
+        };
+        state.jobs.unshift(job);
+        added++;
       }
+      return { fetched: allResults.length, added, errors };
     }
 
     async function runAgents(targetAgentId = null) {
       if (state.isRefreshing) return;
       state.isRefreshing = true;
-
       const btnAll = document.getElementById('btn-refresh-all');
       const iconAll = document.getElementById('icon-refresh-all');
       btnAll.disabled = true;
       btnAll.classList.add('opacity-75');
       iconAll.classList.add('animate-spin');
-
-      const agentsToRun = targetAgentId
-        ? state.agents.filter((a) => a.id === targetAgentId)
-        : state.agents;
-
-      agentsToRun.forEach((ag) => {
-        ag.status = "En cours d'exécution";
-      });
-
-      document.getElementById('global-refresh-status').textContent = targetAgentId
-        ? `Exécution de ${agentsToRun[0]?.name || 'l’agent IA'} en cours...`
-        : 'Recalcul du matching des CVs en cours...';
-
+      const agentsToRun = targetAgentId ? state.agents.filter(a => a.id === targetAgentId) : state.agents;
+      agentsToRun.forEach(agent => { agent.status = "En cours d'exécution"; });
+      document.getElementById('global-refresh-status').textContent = 'Recherche Adzuna en cours sur les marchés européens et au Royaume-Uni…';
       renderAgents();
       renderKPIs();
 
-      await new Promise((resolve) => setTimeout(resolve, 350));
-
       try {
-        agentsToRun.forEach((ag) => executeSingleAgentSync(ag));
+        // Les agents de matching ne déclenchent pas de requêtes distinctes : un cycle de recherche Adzuna est partagé.
+        const searchAgent = agentsToRun.find(a => a.id !== 'agent-4') || agentsToRun[0];
+        const result = await runAdzunaSearch(searchAgent);
         const stamp = formatTimestamp(new Date());
+        agentsToRun.forEach(agent => { agent.status = result.errors.length && !result.fetched ? 'Erreur' : 'Terminé'; agent.lastRun = stamp; });
         state.lastGlobalRefresh = stamp;
         document.getElementById('global-last-refresh').textContent = stamp;
-        document.getElementById('global-refresh-status').textContent = 'Recalcul terminé — recherche externe non connectée dans cette version';
-
+        document.getElementById('global-refresh-status').textContent = `${result.added} nouvelle(s) offre(s) ajoutée(s) via Adzuna • ${result.fetched} résultat(s) récupéré(s)`;
+        appendLog('Recherche Adzuna Europe', `${result.fetched} résultat(s) reçus ; ${result.added} nouvelle(s) offre(s) ajoutée(s). ${result.errors.length} requête(s) en erreur.`, result.errors.length && !result.fetched ? 'Erreur' : 'Terminé');
+        if (result.errors.length) console.warn('Erreurs Adzuna partielles:', result.errors.slice(0, 8));
         saveState();
         renderAll();
-        showToast(
-          targetAgentId
-            ? `Agent « ${agentsToRun[0]?.name} » actualisé.`
-            : 'Scores de matching recalculés. Aucune recherche externe n’a été effectuée.',
-          'success'
-        );
-      } catch (err) {
-        console.error('Erreur exécution agent IA :', err);
-        agentsToRun.forEach((ag) => {
-          ag.status = 'Erreur';
-          appendLog(ag.name, 'Erreur rencontrée lors de l’actualisation.', 'Erreur');
-        });
-        saveState();
-        renderAll();
-        showToast('Une erreur est survenue lors de l’actualisation.', 'error');
+        if (!result.fetched && result.errors.length) showToast(`Recherche impossible : ${result.errors[0]}`, 'error');
+        else if (!result.added) showToast(`${result.fetched} résultat(s) Adzuna récupéré(s), aucune nouvelle offre (doublons possibles).`, 'info');
+        else showToast(`${result.added} nouvelle(s) offre(s) Adzuna ajoutée(s) en Europe.`, 'success');
+      } catch (error) {
+        console.error('Erreur moteur Adzuna:', error);
+        agentsToRun.forEach(agent => { agent.status = 'Erreur'; });
+        appendLog('Recherche Adzuna Europe', error.message || 'Erreur inconnue', 'Erreur');
+        saveState(); renderAll();
+        showToast(error.message || 'La recherche Adzuna a échoué.', 'error');
       } finally {
         state.isRefreshing = false;
         btnAll.disabled = false;
