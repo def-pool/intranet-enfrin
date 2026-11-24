@@ -117,7 +117,7 @@
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
     <section class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status">
-      <strong>Mode sécurisé :</strong> les anciennes offres de démonstration ont été retirées. La recherche Adzuna Europe est disponible après configuration des clés API dans Vercel ; la synchronisation Gmail reste à connecter. Une annonce ne doit être marquée comme vérifiée qu'après contrôle de sa page exacte.
+      <strong>Mode sécurisé :</strong> aucune offre fictive n'est affichée. La recherche Adzuna utilise les variables ADZUNA_APP_ID et ADZUNA_APP_KEY de Vercel. Les liens Adzuna sont des redirections vers les annonces et ne sont pas présentés comme vérifiés. La clôture conserve une trace locale ; la connexion Gmail de cette application n'est pas encore installée et aucun email ne sera supprimé automatiquement.
     </section>
     <!-- INDICATEURS KPI -->
     <section aria-label="Indicateurs clés">
@@ -282,6 +282,18 @@
           Réinitialiser les filtres
         </button>
       </div>
+    </section>
+
+    <!-- HISTORIQUE DES DOSSIERS CLÔTURÉS -->
+    <section class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs space-y-3">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-slate-900">Traçabilité des candidatures clôturées</h2>
+          <p class="text-xs text-slate-500">Historique conservé dans ce navigateur. Le nettoyage Gmail nécessite encore une connexion Google propre à l'application et une validation distincte.</p>
+        </div>
+        <span id="closed-cases-count" class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">0 dossier</span>
+      </div>
+      <div id="closed-cases-list" class="space-y-2"></div>
     </section>
 
     <!-- AGENTS IA DE RECHERCHE & MATCHING + JOURNAL D'ACTIVITÉ -->
@@ -707,7 +719,8 @@
       'Entretien',
       'Relance à faire',
       'Offre reçue',
-      'Archivé'
+      'Archivé',
+      'Clôturé'
     ];
 
     const JOB_STATUS_STYLES = {
@@ -716,7 +729,8 @@
       'Entretien': 'bg-violet-50 text-violet-800 border-violet-200',
       'Relance à faire': 'bg-amber-50 text-amber-800 border-amber-200',
       'Offre reçue': 'bg-emerald-50 text-emerald-800 border-emerald-200',
-      'Archivé': 'bg-slate-100 text-slate-600 border-slate-200'
+      'Archivé': 'bg-slate-100 text-slate-600 border-slate-200',
+      'Clôturé': 'bg-slate-200 text-slate-700 border-slate-300'
     };
 
     const AGENT_STATUS_STYLES = {
@@ -782,6 +796,7 @@
       jobs: [],
       agents: [],
       logs: [],
+      closedCases: [],
       referenceCvMode: 'BEST_AUTO',
       lastGlobalRefresh: null,
       isRefreshing: false,
@@ -905,6 +920,7 @@
           jobs: state.jobs,
           agents: state.agents,
           logs: state.logs,
+          closedCases: state.closedCases,
           referenceCvMode: state.referenceCvMode,
           lastGlobalRefresh: state.lastGlobalRefresh
         };
@@ -925,9 +941,10 @@
         const parsed = JSON.parse(raw);
         state.cvs = Array.isArray(parsed.cvs) && parsed.cvs.length ? parsed.cvs : structuredClone(DEFAULT_CVS);
         if (state.cvs.some((cv) => ['cv-product-tech','cv-data-ia','cv-management-conseil'].includes(cv.id))) state.cvs = structuredClone(DEFAULT_CVS);
-        state.jobs = Array.isArray(parsed.jobs) ? parsed.jobs.filter((job) => !/^job-[1-6]$/.test(String(job?.id || ''))) : structuredClone(DEFAULT_JOBS);
+        state.jobs = Array.isArray(parsed.jobs) ? parsed.jobs.filter((job) => !/^job-[1-6]$/.test(String(job?.id || ''))).map((job) => ({ ...job, url: sanitizeUrl(job?.url || '') })) : structuredClone(DEFAULT_JOBS);
         state.agents = Array.isArray(parsed.agents) && parsed.agents.length ? parsed.agents : structuredClone(DEFAULT_AGENTS);
         state.logs = Array.isArray(parsed.logs) ? parsed.logs : [];
+        state.closedCases = Array.isArray(parsed.closedCases) ? parsed.closedCases : [];
         state.referenceCvMode = parsed.referenceCvMode || 'BEST_AUTO';
         state.lastGlobalRefresh = parsed.lastGlobalRefresh || null;
 
@@ -950,6 +967,7 @@
       state.referenceCvMode = 'BEST_AUTO';
       state.lastGlobalRefresh = null;
       state.isRefreshing = false;
+      state.closedCases = [];
       state.logs = [
         {
           id: 'log-init',
@@ -1100,7 +1118,20 @@
       let payload = {};
       try { payload = await response.json(); } catch (_) {}
       if (!response.ok) throw new Error(payload.error || `Erreur Adzuna HTTP ${response.status} (${country})`);
-      return Array.isArray(payload.offres) ? payload.offres : [];
+      if (!Array.isArray(payload.offres)) throw new Error(payload.error || `Réponse Adzuna invalide (${country})`);
+      return payload.offres.map((item) => ({
+        id_source: item.id_source || item.id || null,
+        country: item.pays || country,
+        title: item.poste || item.title || '',
+        company: item.entreprise || item.company || '',
+        location: item.localisation || item.location || '',
+        url: item.lien_offre || item.redirect_url || '',
+        description: item.description || '',
+        created: item.date_publication || item.created || null,
+        salary_min: item.salaire_min ?? item.salary_min ?? null,
+        salary_max: item.salaire_max ?? item.salary_max ?? null,
+        link_status: 'adzuna_redirect_unverified'
+      }));
     }
 
     async function runAdzunaSearch(agent) {
@@ -1172,10 +1203,10 @@
         const searchAgent = agentsToRun.find(a => a.id !== 'agent-4') || agentsToRun[0];
         const result = await runAdzunaSearch(searchAgent);
         const stamp = formatTimestamp(new Date());
-        agentsToRun.forEach(agent => { agent.status = result.errors.length && !result.fetched ? 'Erreur' : 'Terminé'; agent.lastRun = stamp; });
+        agentsToRun.forEach(agent => { agent.status = result.errors.length && !result.fetched ? 'Erreur' : (result.fetched ? 'Terminé' : 'En attente'); agent.lastRun = stamp; });
         state.lastGlobalRefresh = stamp;
         document.getElementById('global-last-refresh').textContent = stamp;
-        document.getElementById('global-refresh-status').textContent = `${result.added} nouvelle(s) offre(s) ajoutée(s) via Adzuna • ${result.fetched} résultat(s) récupéré(s)`;
+        document.getElementById('global-refresh-status').textContent = result.errors.length && !result.fetched ? `Échec de recherche : ${result.errors.length} erreur(s), aucune offre récupérée.` : `${result.added} nouvelle(s) offre(s) ajoutée(s) via Adzuna • ${result.fetched} résultat(s) récupéré(s)`;
         appendLog('Recherche Adzuna Europe', `${result.fetched} résultat(s) reçus ; ${result.added} nouvelle(s) offre(s) ajoutée(s). ${result.errors.length} requête(s) en erreur.`, result.errors.length && !result.fetched ? 'Erreur' : 'Terminé');
         if (result.errors.length) console.warn('Erreurs Adzuna partielles:', result.errors.slice(0, 8));
         saveState();
@@ -1636,12 +1667,36 @@
         .join('');
     }
 
+    function renderClosedCases() {
+      const list = document.getElementById('closed-cases-list');
+      const cases = Array.isArray(state.closedCases) ? state.closedCases : [];
+      document.getElementById('closed-cases-count').textContent = `${cases.length} dossier${cases.length > 1 ? 's' : ''}`;
+      if (!cases.length) {
+        list.innerHTML = '<p class="text-xs text-slate-500 py-3">Aucun dossier clôturé pour le moment. Passe le statut d’une candidature à « Clôturé » pour conserver sa trace ici.</p>';
+        return;
+      }
+      list.innerHTML = cases.map((item) => `
+        <article class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+            <div class="min-w-0">
+              <p class="text-sm font-bold text-slate-800">${escapeHTML(item.title || 'Poste non renseigné')} — ${escapeHTML(item.company || 'Entreprise non renseignée')}</p>
+              <p class="text-xs text-slate-500">${escapeHTML(item.location || '')} ${item.source ? '• ' + escapeHTML(item.source) : ''}</p>
+              <p class="mt-1 text-xs text-slate-600">Clôturé le ${escapeHTML(item.closedAt ? new Date(item.closedAt).toLocaleString('fr-FR') : 'date inconnue')}</p>
+            </div>
+            <span class="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800">Gmail : non nettoyé</span>
+          </div>
+          <p class="mt-2 text-xs text-slate-500">${escapeHTML(item.note || 'Trace de clôture conservée localement.')}</p>
+          ${item.url ? `<a class="mt-2 inline-block text-xs font-semibold text-sky-700 underline" href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer">Ouvrir l’annonce d’origine</a>` : ''}
+        </article>`).join('');
+    }
+
     function renderAll() {
       renderKPIs();
       renderCvSelectorAndCards();
       renderJobs();
       renderAgents();
       renderActivityLog();
+      renderClosedCases();
     }
 
     // =========================================================================
@@ -2108,13 +2163,38 @@
         if (!sel) return;
         const job = state.jobs.find((j) => j.id === sel.dataset.jobStatusId);
         if (!job) return;
+        const previousStatus = job.status;
+        if (sel.value === 'Clôturé' && previousStatus !== 'Clôturé') {
+          const confirmed = window.confirm(`Clôturer le dossier « ${job.title} » chez ${job.company} ?\n\nL'application conservera une trace locale du dossier. Aucun email Gmail ne sera supprimé par cette action.`);
+          if (!confirmed) { sel.value = previousStatus; return; }
+          const closedAt = new Date().toISOString();
+          const trace = {
+            id: `case-${job.id}-${Date.now()}`,
+            jobId: job.id,
+            title: job.title,
+            company: job.company,
+            location: job.location || '',
+            source: job.source || '',
+            url: job.url || '',
+            previousStatus,
+            finalStatus: 'Clôturé',
+            closedAt,
+            note: 'Dossier clôturé dans le tableau de bord. Historique de candidature conservé localement. Nettoyage Gmail non exécuté : connexion Gmail de l’application non configurée.',
+            gmailCleanup: 'non_connecte_validation_requise'
+          };
+          state.closedCases = Array.isArray(state.closedCases) ? state.closedCases : [];
+          state.closedCases.unshift(trace);
+          job.closedAt = closedAt;
+          job.closureTraceId = trace.id;
+        }
         job.status = sel.value;
-        appendLog('Suivi Candidatures', `Statut de « ${job.title} » passé à « ${job.status} ».`, 'Terminé');
+        appendLog('Suivi Candidatures', `Statut de « ${job.title} » passé de « ${previousStatus} » à « ${job.status} ». ${job.status === 'Clôturé' ? 'Trace conservée ; Gmail non modifié.' : ''}`, 'Terminé');
         saveState();
         renderKPIs();
         renderJobs();
         renderActivityLog();
-        showToast(`Statut : ${job.status}`, 'success');
+        renderClosedCases();
+        showToast(job.status === 'Clôturé' ? 'Dossier clôturé : traçabilité conservée. Aucun email Gmail supprimé.' : `Statut : ${job.status}`, 'success');
       });
 
       jobsListEl.addEventListener('click', (e) => {
