@@ -8,10 +8,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
 body{font-family:Inter,system-ui,sans-serif;background:#f8fafc;color:#0f172a}
-.btn{padding:.5rem .9rem;border-radius:.6rem;font-size:.8rem;font-weight:700;cursor:pointer}
+.btn{padding:.5rem .9rem;border-radius:.6rem;font-size:.8rem;font-weight:700;cursor:pointer;transition:all 0.2s;}
 .btn:disabled{opacity:.5;cursor:wait}
+.btn:hover:not(:disabled){filter:brightness(0.95)}
 .chip{padding:.1rem .5rem;border-radius:9999px;font-size:.7rem;font-weight:700;border:1px solid}
-.inp{width:100%;padding:.5rem .7rem;border:1px solid #cbd5e1;border-radius:.6rem;font-size:.85rem;background:#fff}
+.inp{width:100%;padding:.5rem .7rem;border:1px solid #cbd5e1;border-radius:.6rem;font-size:.85rem;background:#fff;outline:none;}
+.inp:focus{border-color:#6366f1;box-shadow:0 0 0 2px rgba(99,102,241,0.2);}
 dialog::backdrop{background:rgba(15,23,42,.5)}
 </style>
 </head>
@@ -21,78 +23,78 @@ dialog::backdrop{background:rgba(15,23,42,.5)}
 <header class="bg-white border-b sticky top-0 z-30">
   <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-lg font-extrabold">Cockpit Agents IA : offres, candidatures et Gmail</h1>
+      <h1 class="text-lg font-extrabold text-indigo-900">Cockpit Agents IA</h1>
       <p class="text-xs text-slate-500"><span id="gs">Prêt. Aucune exécution automatique.</span> Dernière actualisation : <b id="gl">jamais</b></p>
     </div>
     <div class="flex gap-2">
-      <button id="bAll" class="btn bg-indigo-700 text-white">Tout actualiser</button>
-      <button data-act="newjob" class="btn bg-emerald-700 text-white">Ajouter une offre</button>
-      <button data-act="reset" class="btn border border-rose-300 text-rose-700 bg-white">Réinitialiser</button>
+      <button id="bAll" class="btn bg-indigo-700 text-white shadow-sm hover:bg-indigo-800">Tout actualiser</button>
+      <button data-act="newjob" class="btn bg-emerald-700 text-white shadow-sm hover:bg-emerald-800">Ajouter une offre</button>
+      <button data-act="reset" class="btn border border-rose-300 text-rose-700 bg-white hover:bg-rose-50">Réinitialiser</button>
     </div>
   </div>
 </header>
 
 <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
   <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-    Aucune offre fictive. Les agents appellent des routes Vercel (<code>/api/adzuna</code>, <code>/api/francetravail</code>, <code>/api/careers</code>, <code>/api/gmail</code>). Une route absente s’affiche « Non installé ». Gmail se lit côté serveur (OAuth, lecture seule) : aucun mail n’est supprimé.
+    <b>ℹ️ Info :</b> Aucune offre fictive. Les agents appellent des routes Vercel (<code>/api/adzuna</code>, <code>/api/francetravail</code>, <code>/api/gmail</code>). Gmail se lit côté serveur (OAuth, lecture seule) : aucun mail n’est supprimé.
   </p>
 
   <section id="kpis" class="grid grid-cols-2 xl:grid-cols-5 gap-3"></section>
 
-  <section class="bg-white rounded-xl border p-5 space-y-3">
+  <section class="bg-white rounded-xl border p-5 space-y-3 shadow-sm">
     <div class="flex flex-wrap items-center justify-between gap-2">
-      <h2 class="font-bold">CV de référence (FR, EN, ES)</h2>
-      <select id="refcv" class="inp !w-auto"></select>
+      <h2 class="font-bold text-slate-800">CV de référence (FR, EN, ES)</h2>
+      <select id="refcv" class="inp !w-auto font-semibold text-indigo-700"></select>
     </div>
     <div id="cvs" class="grid md:grid-cols-3 gap-3"></div>
   </section>
 
-  <section class="bg-white rounded-xl border p-5 space-y-4">
+  <section class="bg-white rounded-xl border p-5 space-y-4 shadow-sm">
     <div class="flex items-center justify-between">
-      <h2 class="font-bold">Offres et candidatures</h2>
-      <span class="text-xs text-slate-600">Affichées : <b id="jcount">0</b></span>
+      <h2 class="font-bold text-slate-800">Offres et candidatures</h2>
+      <span class="text-xs text-slate-600 font-semibold bg-slate-100 px-2 py-1 rounded">Affichées : <b id="jcount">0</b></span>
     </div>
     <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-2">
-      <input id="fq" class="inp" placeholder="Poste, entreprise, lieu, mot-clé">
-      <select id="fst" class="inp"></select>
-      <select id="fmin" class="inp"><option value="0">Tous scores</option><option value="70">Matching 70 % et plus</option><option value="50">Matching 50 % et plus</option></select>
-      <select id="fso" class="inp"><option value="match">Matching décroissant</option><option value="date">Plus récentes</option><option value="status">Par statut</option></select>
+      <input id="fq" class="inp" placeholder="🔍 Poste, entreprise, lieu, mot-clé">
+      <select id="fst" class="inp font-medium"></select>
+      <select id="fmin" class="inp font-medium"><option value="0">Tous scores</option><option value="70">Matching 70 % et plus</option><option value="50">Matching 50 % et plus</option></select>
+      <select id="fso" class="inp font-medium"><option value="match">Tri : Matching décroissant</option><option value="date">Tri : Plus récentes</option><option value="status">Tri : Par statut</option></select>
     </div>
     <div id="jobs" class="space-y-3"></div>
-    <p id="jempty" class="hidden text-sm text-slate-500 text-center py-8 border border-dashed rounded-xl">Aucune offre. Lance « Tout actualiser » ou ajoute une offre.</p>
+    <p id="jempty" class="hidden text-sm text-slate-500 text-center py-8 border border-dashed rounded-xl bg-slate-50">Aucune offre. Lance « Tout actualiser » ou ajoute une offre.</p>
   </section>
 
-  <section class="bg-white rounded-xl border p-5 space-y-3">
-    <h2 class="font-bold">Retours Gmail (depuis avril 2026)</h2>
+  <section class="bg-white rounded-xl border p-5 space-y-3 shadow-sm">
+    <h2 class="font-bold text-slate-800">Retours Gmail (depuis avril 2026)</h2>
     <div id="mails" class="space-y-2"></div>
   </section>
 
   <section class="grid lg:grid-cols-12 gap-6">
-    <div class="lg:col-span-8 bg-white rounded-xl border p-5 space-y-3">
-      <h2 class="font-bold">Agents (7)</h2>
+    <div class="lg:col-span-8 bg-white rounded-xl border p-5 space-y-3 shadow-sm">
+      <h2 class="font-bold text-slate-800">Agents (6)</h2>
       <div id="agents" class="grid sm:grid-cols-2 gap-3"></div>
     </div>
-    <div class="lg:col-span-4 bg-white rounded-xl border p-5 flex flex-col">
-      <div class="flex items-center justify-between"><h2 class="font-bold">Journal</h2><button data-act="clearlog" class="text-xs text-slate-500 underline">Effacer</button></div>
-      <div id="log" class="mt-3 space-y-2 max-h-96 overflow-y-auto"></div>
+    <div class="lg:col-span-4 bg-white rounded-xl border p-5 flex flex-col shadow-sm">
+      <div class="flex items-center justify-between"><h2 class="font-bold text-slate-800">Journal d'activité</h2><button data-act="clearlog" class="text-xs text-slate-500 underline hover:text-rose-600">Effacer</button></div>
+      <div id="log" class="mt-3 space-y-2 max-h-[500px] overflow-y-auto pr-1"></div>
     </div>
   </section>
 </main>
 
-<dialog id="jm" class="rounded-2xl p-0 w-full max-w-xl">
-  <form id="fj" class="p-6 space-y-3">
-    <h3 id="jmt" class="font-bold">Offre</h3>
+<dialog id="jm" class="rounded-2xl p-0 w-full max-w-xl shadow-2xl">
+  <form id="fj" class="p-6 space-y-4">
+    <h3 id="jmt" class="font-bold text-lg text-slate-800 border-b pb-2">Offre</h3>
     <input type="hidden" id="j-id">
     <div class="grid sm:grid-cols-2 gap-3">
-      <input id="j-title" class="inp" placeholder="Intitulé du poste *" required>
-      <input id="j-company" class="inp" placeholder="Entreprise *" required>
-      <input id="j-location" class="inp" placeholder="Lieu ou télétravail">
-      <select id="j-status" class="inp"></select>
+      <div><label class="text-xs font-bold text-slate-600">Intitulé du poste *</label><input id="j-title" class="inp" required></div>
+      <div><label class="text-xs font-bold text-slate-600">Entreprise *</label><input id="j-company" class="inp" required></div>
+      <div><label class="text-xs font-bold text-slate-600">Lieu</label><input id="j-location" class="inp" placeholder="Lieu ou télétravail"></div>
+      <div><label class="text-xs font-bold text-slate-600">Statut</label><select id="j-status" class="inp"></select></div>
     </div>
-    <input id="j-url" class="inp" placeholder="URL précise de l’annonce (https://…)">
-    <input id="j-skills" class="inp" placeholder="Mots-clés attendus, séparés par des virgules">
-    <textarea id="j-notes" rows="3" class="inp" placeholder="Notes, contact, relance prévue"></textarea>
-    <div class="flex justify-end gap-2">
+    <div><label class="text-xs font-bold text-slate-600">URL de l'annonce</label><input id="j-url" class="inp" placeholder="https://…"></div>
+    <div><label class="text-xs font-bold text-slate-600">Mots-clés attendus</label><input id="j-skills" class="inp" placeholder="ex: B2B, export, management"></div>
+    <div><label class="text-xs font-bold text-slate-600">Notes</label><textarea id="j-notes" rows="3" class="inp" placeholder="Contact, relance prévue..."></textarea></div>
+    <div class="flex justify-end gap-2 pt-2 border-t">
       <button type="button" data-act="closejm" class="btn border bg-white">Annuler</button>
       <button type="submit" class="btn bg-emerald-700 text-white">Enregistrer</button>
     </div>
@@ -100,21 +102,25 @@ dialog::backdrop{background:rgba(15,23,42,.5)}
 </dialog>
 
 <script>
+// ⚠️ IMPORTANT : REMPLACEZ PAR LA CLÉ QUE VOUS AVEZ MISE DANS VERCEL POUR "COCKPIT_KEY"
+const MA_COCKPIT_KEY = 'mon-cockpit-2026'; 
+
 const KEY = 'cockpit_v2', OLD = 'cockpit_agents_offres_cvs_v1';
 const ST = ['À postuler','Postulé','Relance à faire','Entretien','Offre reçue','Refusé','Archivé','Clôturé'];
 const RANK = {'À postuler':0,'Postulé':1,'Relance à faire':2,'Entretien':3,'Offre reçue':4,'Refusé':4};
 const STC = {'À postuler':'bg-sky-50 text-sky-800 border-sky-200','Postulé':'bg-indigo-50 text-indigo-800 border-indigo-200','Relance à faire':'bg-amber-50 text-amber-800 border-amber-200','Entretien':'bg-violet-50 text-violet-800 border-violet-200','Offre reçue':'bg-emerald-50 text-emerald-800 border-emerald-200','Refusé':'bg-rose-50 text-rose-800 border-rose-200','Archivé':'bg-slate-100 text-slate-600 border-slate-200','Clôturé':'bg-slate-200 text-slate-700 border-slate-300'};
 const AGC = {'En attente':'bg-slate-100 text-slate-700 border-slate-200','En cours':'bg-sky-50 text-sky-800 border-sky-200','Terminé':'bg-emerald-50 text-emerald-800 border-emerald-200','Erreur':'bg-rose-50 text-rose-800 border-rose-200','Non installé':'bg-amber-50 text-amber-800 border-amber-200'};
 const EU = ['gb','fr','de','nl','be','at','ch','it','es','pl','se','no','dk','ie','pt'];
+
 const AGENTS = [
  {id:'a1',type:'adzuna',name:'Direction commerciale Europe',role:'Adzuna, 15 pays : directeur commercial, head of sales, country manager.',q:['Commercial Director','Sales Director Head of Sales','Country Manager'],countries:EU},
  {id:'a2',type:'adzuna',name:'Piscine, spa et traitement de l’eau',role:'Adzuna : postes commerciaux piscine, spa, wellness, chimie de l’eau.',q:['pool sales manager','water treatment sales manager','spa wellness business manager'],countries:EU},
  {id:'a3',type:'adzuna',name:'Export, channel et développement',role:'Adzuna : export, réseaux de distribution, business development B2B.',q:['Export Director','Channel Manager','Business Development Manager B2B'],countries:EU},
- {id:'a4',type:'api',endpoint:'/api/francetravail',name:'France Travail',role:'Offres officielles France Travail (route à créer sur Vercel).'},
- {id:'a5',type:'api',endpoint:'/api/careers',name:'Sites carrières et candidatures directes',role:'Marché caché : pages carrières des fabricants piscine, spa, wellness (route à créer).'},
- {id:'a6',type:'gmail',endpoint:'/api/gmail',name:'Gmail : candidatures et retours',role:'Lit les accusés, refus, entretiens ; met à jour les statuts (route OAuth à créer).'},
+ {id:'a4',type:'api',endpoint:'/api/francetravail',name:'France Travail',role:'Offres officielles France Travail (API connectée).'},
+ {id:'a6',type:'gmail',endpoint:'/api/gmail',name:'Gmail : candidatures et retours',role:'Lit les accusés, refus, entretiens ; met à jour les statuts.'},
  {id:'a7',type:'local',name:'Matching, doublons et relances',role:'Recalcule les scores, retire les doublons, passe en relance après 10 jours sans retour.'}
 ];
+
 const CVS = [
  {id:'cv-damien-fr',language:'fr',name:'CV Damien Enfrin (français)',headline:'Directeur commercial France et International',skills:['direction commerciale','business development','B2B','export','Europe','distribution','channel','management','OEM','hydraulique','pompage','traitement de l’eau','piscine','spa','REACH','anglais','espagnol']},
  {id:'cv-damien-en',language:'en',name:'CV Damien Enfrin (English)',headline:'Commercial Director France and International',skills:['commercial director','sales director','head of sales','business development','B2B','export','EMEA','distribution','channel','P&L','OEM','private label','water treatment','pumping','pool','spa','REACH']},
@@ -128,10 +134,12 @@ const now = () => new Date().toLocaleString('fr-FR');
 const days = d => { const n = (Date.now() - new Date(d)) / 864e5; return isNaN(n) ? 0 : n; };
 const csv = s => String(s).split(/[,;\n]+/).map(x => x.trim()).filter(Boolean);
 const rid = () => 'j' + Date.now() + Math.random().toString(36).slice(2,6);
+
 function cleanUrl(u){ u = String(u||'').trim(); if(!u) return ''; try { const p = new URL(/^https?:\/\//i.test(u) ? u : 'https://' + u); return (p.pathname.replace(/\/+$/,'') === '' && !p.search) ? '' : p.href; } catch { return ''; } }
-function toast(m, t='info'){ const e = document.createElement('div'); e.className = 'px-4 py-3 rounded-xl text-sm font-semibold text-white shadow-lg ' + (t==='error'?'bg-rose-800':t==='success'?'bg-emerald-800':'bg-slate-800'); e.textContent = m; $('toasts').appendChild(e); setTimeout(() => e.remove(), 3500); }
+function toast(m, t='info'){ const e = document.createElement('div'); e.className = 'px-4 py-3 rounded-xl text-sm font-semibold text-white shadow-lg transform transition-all duration-300 ' + (t==='error'?'bg-rose-600':t==='success'?'bg-emerald-600':'bg-slate-800'); e.textContent = m; $('toasts').appendChild(e); setTimeout(() => { e.style.opacity = '0'; setTimeout(()=>e.remove(), 300); }, 3500); }
 
 let S = {cvs:[],jobs:[],logs:[],mails:[],ref:'BEST',last:null,ag:{},running:false,f:{q:'',st:'ALL',min:0,sort:'match'}};
+
 function load(){
   let r = null; try { r = JSON.parse(localStorage.getItem(KEY) || localStorage.getItem(OLD) || 'null'); } catch {}
   S.cvs = r?.cvs?.length && r.cvs.every(c => c.language) ? r.cvs : structuredClone(CVS);
@@ -140,6 +148,7 @@ function load(){
   S.ref = r?.ref || r?.referenceCvMode || 'BEST'; if (S.ref === 'BEST_AUTO') S.ref = 'BEST';
   S.last = r?.last || r?.lastGlobalRefresh || null;
 }
+
 function save(){ try { localStorage.setItem(KEY, JSON.stringify({cvs:S.cvs,jobs:S.jobs,logs:S.logs,mails:S.mails,ref:S.ref,last:S.last,ag:S.ag})); } catch { toast('Sauvegarde locale impossible (espace plein).','error'); } }
 function log(agent, message, badge){ S.logs.unshift({time:now(),agent,message,badge}); S.logs = S.logs.slice(0,60); }
 
@@ -148,15 +157,18 @@ function match(j){
   const ev = S.cvs.map(cv => { const m = cv.skills.filter(s => t.includes(nt(s))); return {cv, m, score: m.length ? Math.min(98, 35 + m.length*9) : 20}; }).sort((a,b) => b.score - a.score);
   return (S.ref !== 'BEST' && ev.find(e => e.cv.id === S.ref)) || ev[0] || {cv:{name:'Aucun CV'},m:[],score:0};
 }
+
 const findJob = (co, ti) => S.jobs.find(j => nt(j.company) === nt(co) && nt(j.title) === nt(ti));
 
-async function getJSON(u){
-  const r = await fetch(u, {headers:{Accept:'application/json'}}); let p = {};
+async function getJSON(u, extraHeaders = {}){
+  const r = await fetch(u, {headers:{Accept:'application/json', ...extraHeaders}}); let p = {};
   try { p = await r.json(); } catch {}
   if (!r.ok) throw new Error(p.error || `HTTP ${r.status} ${u.split('?')[0]}`);
   return p;
 }
+
 const toRow = (o, c, a) => ({title:o.poste||o.title||'', company:o.entreprise||o.company||'', location:o.localisation||o.location||'', url:o.lien_offre||o.url||o.redirect_url||'', desc:o.description||'', date:(o.date_publication||o.created||'').slice(0,10), country:o.pays||c||'', salary:[o.salaire_min??o.salary_min,o.salaire_max??o.salary_max].filter(x=>x!=null).map(x=>Math.round(x).toLocaleString('fr-FR')).join(' à '), src:a.name});
+
 function ingest(rows, errs){
   let added = 0;
   for (const o of rows){
@@ -165,16 +177,21 @@ function ingest(rows, errs){
     added++;
   }
   if (!rows.length && errs.length) throw new Error(errs[0]);
-  return {msg:`${rows.length} reçues, ${added} nouvelle(s)${errs.length?`, ${errs.length} requête(s) en erreur`:''}.`};
+  return {msg:`${rows.length} reçue(s), ${added} nouvelle(s)${errs.length?`, ${errs.length} requête(s) en erreur`:''}.`};
 }
+
 async function runAdzuna(a){
   const tasks = a.countries.flatMap(c => a.q.map(q => ({c,q}))), rows = [], errs = []; let i = 0;
   await Promise.all([0,1,2,3,4].map(async () => { while (i < tasks.length){ const t = tasks[i++]; try { const p = await getJSON(`/api/adzuna?country=${t.c}&q=${encodeURIComponent(t.q)}&page=1`); rows.push(...(p.offres||[]).map(o => toRow(o,t.c,a))); } catch(e){ errs.push(e.message); } } }));
   return ingest(rows, errs);
 }
+
 async function runApi(a){ const p = await getJSON(a.endpoint); return ingest((p.offres||[]).map(o => toRow(o,'',a)), []); }
+
 async function runGmail(a){
-  const p = await getJSON(a.endpoint + '?since=2026-04-01'), ev = p.evenements || []; let upd = 0, add = 0;
+  // On envoie la COCKPIT_KEY pour que Vercel accepte de nous laisser lire les mails
+  const p = await getJSON(a.endpoint + '?since=2026-04-01', { 'x-cockpit-key': MA_COCKPIT_KEY }), ev = p.evenements || []; 
+  let upd = 0, add = 0;
   S.mails = ev.slice().sort((x,y) => String(y.date).localeCompare(String(x.date))).slice(0,100);
   for (const e of ev){
     let j = findJob(e.entreprise, e.poste) || (S.jobs.filter(x => nt(x.company) === nt(e.entreprise)).length === 1 ? S.jobs.find(x => nt(x.company) === nt(e.entreprise)) : null);
@@ -183,19 +200,26 @@ async function runGmail(a){
   }
   return {msg:`${ev.length} mail(s) analysé(s), ${upd} statut(s) mis à jour, ${add} candidature(s) ajoutée(s).`};
 }
+
 function runLocal(){
   const seen = new Set(), before = S.jobs.length; let rel = 0;
   S.jobs = S.jobs.filter(j => { const k = nt(j.company)+'|'+nt(j.title); if (seen.has(k)) return false; seen.add(k); return true; });
   S.jobs.forEach(j => { if (j.status === 'Postulé' && days(j.lastMail || j.appliedAt || j.date) > 10){ j.status = 'Relance à faire'; rel++; } });
   return {msg:`${before - S.jobs.length} doublon(s) retiré(s), ${rel} relance(s) à faire, scores recalculés.`};
 }
+
 async function run(ids){
-  if (S.running) return; S.running = true; $('bAll').disabled = true; $('gs').textContent = 'Agents en cours…';
+  if (S.running) return; 
+  S.running = true; 
+  $('bAll').disabled = true; 
+  $('gs').textContent = 'Agents en cours…';
+  
   for (const a of AGENTS.filter(x => !ids || ids.includes(x.id))){
     S.ag[a.id] = {...S.ag[a.id], status:'En cours'}; renderAgents();
     try {
       const r = a.type==='adzuna' ? await runAdzuna(a) : a.type==='gmail' ? await runGmail(a) : a.type==='api' ? await runApi(a) : runLocal();
-      S.ag[a.id] = {status:'Terminé', lastRun:now(), msg:r.msg}; log(a.name, r.msg, 'Terminé');
+      S.ag[a.id] = {status:'Terminé', lastRun:now(), msg:r.msg}; 
+      log(a.name, r.msg, 'Terminé');
     } catch(e){
       const miss = /HTTP 404/.test(e.message);
       S.ag[a.id] = {status: miss ? 'Non installé' : 'Erreur', lastRun:now(), msg:e.message};
@@ -203,46 +227,65 @@ async function run(ids){
     }
     save(); renderAll();
   }
-  S.last = now(); S.running = false; $('bAll').disabled = false; $('gs').textContent = 'Actualisation terminée.'; save(); renderAll(); toast('Actualisation terminée.','success');
+  S.last = now(); 
+  S.running = false; 
+  $('bAll').disabled = false; 
+  $('gs').textContent = 'Actualisation terminée.'; 
+  save(); renderAll(); 
+  toast('Actualisation terminée.','success');
 }
 
 function renderKPIs(){
   const n = s => S.jobs.filter(j => j.status === s).length, sc = S.jobs.map(j => match(j).score);
-  const k = [['Offres suivies', S.jobs.length, `${n('À postuler')} à postuler, ${n('Postulé')} postulées`],['Matching moyen', (sc.length ? Math.round(sc.reduce((a,b)=>a+b,0)/sc.length) : 0) + ' %', `Meilleur : ${sc.length ? Math.max(...sc) : 0} %`],['Entretiens et offres', n('Entretien')+n('Offre reçue'), `${n('Refusé')} refus`],['Relances à faire', n('Relance à faire'), `${S.mails.length} mail(s) Gmail analysé(s)`],['Agents', AGENTS.length, `${Object.values(S.ag).filter(a => a.status==='Terminé').length} terminé(s)`]];
-  $('kpis').innerHTML = k.map(x => `<div class="bg-white rounded-xl border p-4"><div class="text-xs font-semibold text-slate-500">${x[0]}</div><div class="text-2xl font-extrabold mt-1">${x[1]}</div><p class="text-xs text-slate-500 mt-1">${esc(x[2])}</p></div>`).join('');
+  const k = [
+    ['Offres suivies', S.jobs.length, `${n('À postuler')} à postuler, ${n('Postulé')} postulées`],
+    ['Matching moyen', (sc.length ? Math.round(sc.reduce((a,b)=>a+b,0)/sc.length) : 0) + ' %', `Meilleur : ${sc.length ? Math.max(...sc) : 0} %`],
+    ['Entretiens et offres', n('Entretien')+n('Offre reçue'), `${n('Refusé')} refus`],
+    ['Relances à faire', n('Relance à faire'), `${S.mails.length} mail(s) Gmail`],
+    ['Agents', AGENTS.length, `${Object.values(S.ag).filter(a => a.status==='Terminé').length} terminé(s)`]
+  ];
+  $('kpis').innerHTML = k.map(x => `<div class="bg-white rounded-xl border p-4 shadow-sm"><div class="text-xs font-bold text-slate-500 uppercase tracking-wider">${x[0]}</div><div class="text-2xl font-extrabold mt-1 text-slate-800">${x[1]}</div><p class="text-xs text-slate-500 mt-1">${esc(x[2])}</p></div>`).join('');
 }
+
 function renderCVs(){
   $('refcv').innerHTML = `<option value="BEST">Meilleur CV (automatique)</option>` + S.cvs.map(c => `<option value="${esc(c.id)}" ${S.ref===c.id?'selected':''}>${esc(c.name)}</option>`).join('');
-  $('cvs').innerHTML = S.cvs.map(c => `<div class="rounded-xl border p-4 ${S.ref===c.id?'border-indigo-600':''}"><h3 class="text-sm font-bold">${esc(c.name)}</h3><p class="text-xs text-indigo-800">${esc(c.headline)}</p><p class="text-xs text-slate-600 mt-2">${esc(c.skills.slice(0,8).join(', '))}${c.skills.length>8?` (+${c.skills.length-8})`:''}</p><div class="flex gap-2 mt-3"><button data-act="usecv" data-id="${esc(c.id)}" class="btn border bg-white">Utiliser</button><button data-act="skills" data-id="${esc(c.id)}" class="btn border bg-white">Modifier les mots-clés</button></div></div>`).join('');
+  $('cvs').innerHTML = S.cvs.map(c => `<div class="rounded-xl border p-4 ${S.ref===c.id?'border-indigo-600 bg-indigo-50/30':'bg-white'} transition-colors"><h3 class="text-sm font-bold text-slate-800">${esc(c.name)}</h3><p class="text-xs font-semibold text-indigo-800 mt-1">${esc(c.headline)}</p><p class="text-xs text-slate-600 mt-2 line-clamp-2">${esc(c.skills.slice(0,8).join(', '))}${c.skills.length>8?` (+${c.skills.length-8})`:''}</p><div class="flex gap-2 mt-3"><button data-act="usecv" data-id="${esc(c.id)}" class="btn border bg-white hover:bg-slate-50 ${S.ref===c.id?'text-indigo-700 border-indigo-300':'text-slate-700'}">${S.ref===c.id?'Sélectionné':'Utiliser'}</button><button data-act="skills" data-id="${esc(c.id)}" class="btn border bg-white hover:bg-slate-50 text-slate-700">Modifier mots-clés</button></div></div>`).join('');
 }
+
 function renderJobs(){
   const q = nt(S.f.q);
   const rows = S.jobs.map(j => ({j, m:match(j)})).filter(({j,m}) => (S.f.st==='ALL' || j.status===S.f.st) && m.score >= S.f.min && (!q || nt(`${j.title} ${j.company} ${j.location} ${j.source} ${j.notes}`).includes(q)))
     .sort((a,b) => S.f.sort==='date' ? String(b.j.date).localeCompare(String(a.j.date)) : S.f.sort==='status' ? ST.indexOf(a.j.status)-ST.indexOf(b.j.status) : b.m.score-a.m.score);
   $('jcount').textContent = rows.length; $('jempty').classList.toggle('hidden', rows.length > 0);
-  $('jobs').innerHTML = rows.map(({j,m}) => `<article class="rounded-xl border p-4 flex flex-col lg:flex-row gap-4 justify-between">
-    <div class="min-w-0 space-y-1">
-      <div class="flex flex-wrap items-center gap-2"><h3 class="font-bold">${esc(j.title)}</h3><span class="chip bg-slate-100 border-slate-200">${esc(j.company)}</span>${j.source?`<span class="chip bg-sky-50 text-sky-800 border-sky-200">${esc(j.source)}</span>`:''}</div>
-      <p class="text-xs text-slate-600">${esc(j.location||'Lieu non précisé')}${j.salary?' • '+esc(j.salary):''} • ${esc(j.date||'')}${j.lastMail?' • dernier mail '+esc(j.lastMail):''}</p>
-      ${j.notes?`<p class="text-xs text-slate-600 bg-slate-50 rounded-lg px-3 py-2 line-clamp-3">${esc(j.notes)}</p>`:''}
-      <p class="text-xs"><b>CV :</b> ${esc(m.cv.name)} ${m.m.slice(0,5).map(s=>`<span class="chip bg-emerald-50 text-emerald-800 border-emerald-200">${esc(s)}</span>`).join(' ')}</p>
+  $('jobs').innerHTML = rows.map(({j,m}) => `<article class="rounded-xl border p-4 flex flex-col lg:flex-row gap-4 justify-between bg-white hover:shadow-md transition-shadow">
+    <div class="min-w-0 space-y-2 flex-1">
+      <div class="flex flex-wrap items-center gap-2"><h3 class="font-bold text-lg text-slate-800">${esc(j.title)}</h3><span class="chip bg-slate-100 border-slate-200 text-slate-700">${esc(j.company)}</span>${j.source?`<span class="chip bg-indigo-50 text-indigo-700 border-indigo-100">${esc(j.source)}</span>`:''}</div>
+      <p class="text-xs font-medium text-slate-500">📍 ${esc(j.location||'Lieu non précisé')}${j.salary?' • 💰 '+esc(j.salary):''} • 📅 ${esc(j.date||'')}${j.lastMail?' • ✉️ dernier mail '+esc(j.lastMail):''}</p>
+      ${j.notes?`<p class="text-xs text-slate-600 bg-slate-50 rounded-lg px-3 py-2 line-clamp-3 border border-slate-100">${esc(j.notes)}</p>`:''}
+      <p class="text-xs flex flex-wrap items-center gap-1"><b class="text-slate-700">CV :</b> <span class="text-indigo-600 font-semibold mr-1">${esc(m.cv.name)}</span> ${m.m.slice(0,5).map(s=>`<span class="chip bg-emerald-50 text-emerald-800 border-emerald-200">${esc(s)}</span>`).join(' ')}</p>
     </div>
-    <div class="lg:w-60 shrink-0 space-y-2">
-      <div class="flex justify-between text-xs font-semibold"><span>Matching</span><span>${m.score} %</span></div>
-      <div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-indigo-600" style="width:${m.score}%"></div></div>
-      <select data-st="${esc(j.id)}" class="inp font-bold ${STC[j.status]||''}">${ST.map(s=>`<option ${s===j.status?'selected':''}>${s}</option>`).join('')}</select>
-      <div class="flex flex-wrap gap-1">${j.url?`<a href="${esc(j.url)}" target="_blank" rel="noopener noreferrer" class="btn bg-indigo-700 text-white">Voir l’annonce</a><button data-act="copy" data-id="${esc(j.id)}" class="btn border bg-white">Copier</button>`:`<span class="text-xs text-amber-800">Lien manquant</span>`}<button data-act="edit" data-id="${esc(j.id)}" class="btn border bg-white">Modifier</button><button data-act="del" data-id="${esc(j.id)}" class="btn border border-rose-200 text-rose-700 bg-white">Supprimer</button></div>
+    <div class="lg:w-64 shrink-0 space-y-2 flex flex-col justify-between">
+      <div>
+        <div class="flex justify-between text-xs font-bold mb-1"><span class="text-slate-600">Matching</span><span class="${m.score>=70?'text-emerald-600':m.score>=50?'text-amber-600':'text-slate-500'}">${m.score} %</span></div>
+        <div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full ${m.score>=70?'bg-emerald-500':m.score>=50?'bg-amber-500':'bg-slate-300'}" style="width:${m.score}%"></div></div>
+      </div>
+      <select data-st="${esc(j.id)}" class="inp font-bold text-sm ${STC[j.status]||''} cursor-pointer">${ST.map(s=>`<option ${s===j.status?'selected':''}>${s}</option>`).join('')}</select>
+      <div class="flex flex-wrap gap-1.5">${j.url?`<a href="${esc(j.url)}" target="_blank" rel="noopener noreferrer" class="btn bg-indigo-600 text-white shadow-sm flex-1 text-center">Voir l'annonce</a><button data-act="copy" data-id="${esc(j.id)}" class="btn border bg-white hover:bg-slate-50" title="Copier le lien">📋</button>`:`<span class="text-xs text-amber-800 bg-amber-50 px-2 py-1 rounded border border-amber-200 w-full text-center">Lien manquant</span>`}<button data-act="edit" data-id="${esc(j.id)}" class="btn border bg-white hover:bg-slate-50 flex-1">Modifier</button><button data-act="del" data-id="${esc(j.id)}" class="btn border border-rose-200 text-rose-600 bg-white hover:bg-rose-50" title="Supprimer">🗑️</button></div>
     </div></article>`).join('');
 }
+
 function renderMails(){
-  $('mails').innerHTML = S.mails.length ? S.mails.slice(0,15).map(e => `<div class="flex flex-wrap items-center gap-2 text-sm border-b pb-2"><span class="text-xs text-slate-500 w-24">${esc(e.date||'')}</span><b>${esc(e.entreprise||'')}</b><span class="text-slate-600">${esc(e.poste||'')}</span><span class="chip ${STC[e.statut]||'bg-slate-100 border-slate-200'}">${esc(e.statut||'')}</span><span class="text-xs text-slate-500 truncate">${esc(e.sujet||'')}</span></div>`).join('') : '<p class="text-sm text-slate-500">Aucun retour chargé. Lance l’agent « Gmail : candidatures et retours » une fois la route <code>/api/gmail</code> installée.</p>';
+  $('mails').innerHTML = S.mails.length ? S.mails.slice(0,15).map(e => `<div class="flex flex-wrap items-center gap-2 text-sm border-b border-slate-100 pb-2"><span class="text-xs font-semibold text-slate-400 w-24">${esc(e.date||'')}</span><b class="text-slate-800 min-w-[120px]">${esc(e.entreprise||'')}</b><span class="text-slate-600 flex-1 truncate">${esc(e.poste||'')}</span><span class="chip ${STC[e.statut]||'bg-slate-100 border-slate-200'}">${esc(e.statut||'')}</span><span class="text-xs text-slate-400 italic truncate max-w-[200px]" title="${esc(e.sujet||'')}">${esc(e.sujet||'')}</span></div>`).join('') : '<p class="text-sm text-slate-500 text-center py-4 bg-slate-50 rounded-lg">Aucun retour chargé. Lancez l’agent Gmail pour synchroniser.</p>';
 }
+
 function renderAgents(){
-  $('agents').innerHTML = AGENTS.map(a => { const s = S.ag[a.id] || {status:'En attente'}; return `<div class="rounded-xl border p-4 flex flex-col justify-between gap-3"><div><div class="flex justify-between gap-2"><h3 class="text-sm font-bold">${esc(a.name)}</h3><span class="chip shrink-0 ${AGC[s.status]||AGC['En attente']}">${esc(s.status)}</span></div><p class="text-xs text-slate-600 mt-1">${esc(a.role)}</p>${s.msg?`<p class="text-xs text-slate-500 mt-1">${esc(s.msg)}</p>`:''}</div><div class="flex items-center justify-between"><span class="text-[11px] text-slate-500">${s.lastRun?'Dernier passage : '+esc(s.lastRun):'Jamais exécuté'}</span><button data-act="run" data-id="${a.id}" ${S.running?'disabled':''} class="btn bg-indigo-700 text-white">Lancer</button></div></div>`; }).join('');
+  $('agents').innerHTML = AGENTS.map(a => { const s = S.ag[a.id] || {status:'En attente'}; return `<div class="rounded-xl border p-4 flex flex-col justify-between gap-3 bg-white shadow-sm"><div><div class="flex justify-between gap-2 items-start"><h3 class="text-sm font-bold text-slate-800 leading-tight">${esc(a.name)}</h3><span class="chip shrink-0 ${AGC[s.status]||AGC['En attente']}">${esc(s.status)}</span></div><p class="text-xs text-slate-500 mt-1 line-clamp-2" title="${esc(a.role)}">${esc(a.role)}</p>${s.msg?`<p class="text-xs font-medium ${s.status==='Erreur'?'text-rose-600':'text-emerald-700'} mt-2 bg-slate-50 p-1.5 rounded line-clamp-2" title="${esc(s.msg)}">${esc(s.msg)}</p>`:''}</div><div class="flex items-center justify-between pt-2 border-t border-slate-100"><span class="text-[10px] text-slate-400">${s.lastRun?'Vu : '+esc(s.lastRun):'Jamais exécuté'}</span><button data-act="run" data-id="${a.id}" ${S.running?'disabled':''} class="btn bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100">Lancer</button></div></div>`; }).join('');
 }
+
 function renderLog(){
-  $('log').innerHTML = S.logs.length ? S.logs.map(l => `<div class="rounded-lg border p-2"><div class="flex justify-between gap-2"><b class="text-xs">${esc(l.agent)}</b><span class="chip ${AGC[l.badge]||''}">${esc(l.badge)}</span></div><p class="text-xs text-slate-600">${esc(l.message)}</p><span class="text-[10px] text-slate-400">${esc(l.time)}</span></div>`).join('') : '<p class="text-xs text-slate-500 text-center py-6">Aucune activité.</p>';
+  $('log').innerHTML = S.logs.length ? S.logs.map(l => `<div class="rounded-lg border border-slate-100 p-2.5 bg-slate-50/50"><div class="flex justify-between gap-2 items-center mb-1"><b class="text-xs text-slate-700 truncate">${esc(l.agent)}</b><span class="chip ${AGC[l.badge]||''} text-[9px] px-1.5 py-0">${esc(l.badge)}</span></div><p class="text-xs text-slate-600 leading-snug">${esc(l.message)}</p><span class="text-[9px] text-slate-400 block mt-1">${esc(l.time)}</span></div>`).join('') : '<p class="text-xs text-slate-500 text-center py-6">Aucune activité récente.</p>';
 }
+
 function renderAll(){ $('gl').textContent = S.last || 'jamais'; renderKPIs(); renderCVs(); renderJobs(); renderMails(); renderAgents(); renderLog(); }
 
 function openJob(j){
@@ -250,6 +293,7 @@ function openJob(j){
   if (j){ $('j-title').value = j.title; $('j-company').value = j.company; $('j-location').value = j.location||''; $('j-status').value = j.status; $('j-url').value = j.url||''; $('j-skills').value = (j.skills||[]).join(', '); $('j-notes').value = j.notes||''; }
   $('jm').showModal();
 }
+
 $('fj').addEventListener('submit', e => {
   e.preventDefault(); const raw = $('j-url').value.trim(), url = cleanUrl(raw), id = $('j-id').value;
   if (raw && !url) return toast('Lien invalide ou générique : colle l’URL de la fiche précise.','error');
@@ -273,6 +317,7 @@ document.addEventListener('click', async e => {
   else if (a==='clearlog'){ S.logs = []; save(); renderLog(); }
   else if (a==='reset'){ if (confirm('Effacer toutes les données locales (offres, CV, journal) ?')){ localStorage.removeItem(KEY); localStorage.removeItem(OLD); load(); S.jobs = []; S.cvs = structuredClone(CVS); S.logs = []; S.mails = []; S.ag = {}; S.last = null; save(); renderAll(); toast('Données locales effacées.','info'); } }
 });
+
 $('jobs').addEventListener('change', e => {
   const sel = e.target.closest('[data-st]'); if (!sel) return; const j = S.jobs.find(x => x.id === sel.dataset.st); if (!j) return;
   if (sel.value === 'Clôturé' && !confirm(`Clôturer « ${j.title} » ? Aucun email Gmail ne sera supprimé.`)){ sel.value = j.status; return; }
@@ -280,6 +325,7 @@ $('jobs').addEventListener('change', e => {
   if (j.status === 'Postulé' && !j.appliedAt) j.appliedAt = new Date().toISOString().slice(0,10);
   save(); renderAll();
 });
+
 $('bAll').addEventListener('click', () => run(null));
 $('refcv').addEventListener('change', e => { S.ref = e.target.value; save(); renderAll(); });
 $('fst').innerHTML = `<option value="ALL">Tous statuts</option>` + ST.map(s => `<option>${s}</option>`).join('');
