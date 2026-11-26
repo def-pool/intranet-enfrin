@@ -1,2347 +1,294 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cockpit Agents IA, Offres d'Emploi & Matching CVs</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" referrerpolicy="no-referrer"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      color-scheme: light;
-    }
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: #f8fafc;
-      color: #0f172a;
-      overflow-x: hidden;
-    }
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: #f1f5f9;
-      border-radius: 9999px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 9999px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cockpit Agents IA : offres, candidatures et Gmail</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+body{font-family:Inter,system-ui,sans-serif;background:#f8fafc;color:#0f172a}
+.btn{padding:.5rem .9rem;border-radius:.6rem;font-size:.8rem;font-weight:700;cursor:pointer}
+.btn:disabled{opacity:.5;cursor:wait}
+.chip{padding:.1rem .5rem;border-radius:9999px;font-size:.7rem;font-weight:700;border:1px solid}
+.inp{width:100%;padding:.5rem .7rem;border:1px solid #cbd5e1;border-radius:.6rem;font-size:.85rem;background:#fff}
+dialog::backdrop{background:rgba(15,23,42,.5)}
+</style>
 </head>
-<body class="bg-slate-50 text-slate-900 min-h-screen antialiased">
-  <!-- Conteneur de notifications non bloquantes -->
-  <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+<body>
+<div id="toasts" class="fixed top-4 right-4 z-50 space-y-2 max-w-sm"></div>
 
-  <!-- EN-TÊTE PRINCIPAL -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
-      <div class="flex items-start sm:items-center gap-3.5">
-        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-sky-600 via-indigo-600 to-violet-700 text-white flex items-center justify-center shrink-0 shadow-sm">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-          </svg>
-        </div>
-        <div>
-          <div class="flex flex-wrap items-center gap-2">
-            <h1 class="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900">
-              Cockpit Agents IA, Offres d'Emploi & Matching CVs
-            </h1>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-              Déclenchement manuel uniquement
-            </span>
-          </div>
-          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs sm:text-sm text-slate-500 mt-0.5">
-            <span id="global-refresh-status" class="font-medium text-slate-700">
-              Prêt au lancement — cliquez sur Tout actualiser
-            </span>
-            <span aria-hidden="true">•</span>
-            <span>Dernière actualisation : <strong id="global-last-refresh" class="text-slate-800">Jamais (en attente)</strong></span>
-          </div>
-        </div>
-      </div>
-
-      <!-- BOUTONS D'ACTION PRINCIPAUX -->
-      <div class="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          id="btn-refresh-all"
-          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 active:from-sky-800 active:to-indigo-800 text-white text-sm font-bold shadow-xs transition cursor-pointer"
-        >
-          <svg id="icon-refresh-all" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          Tout actualiser
-        </button>
-
-        <button
-          type="button"
-          id="btn-open-job-modal"
-          class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-xs transition cursor-pointer"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          Ajouter une offre
-        </button>
-
-        <button
-          type="button"
-          id="btn-open-cv-modal"
-          class="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-sm font-semibold transition cursor-pointer"
-        >
-          <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          Gérer mes CVs
-        </button>
-
-        <button
-          type="button"
-          id="btn-reset-data"
-          class="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 text-xs sm:text-sm font-medium transition cursor-pointer"
-          title="Réinitialiser les données locales"
-        >
-          Réinitialiser
-        </button>
-      </div>
+<header class="bg-white border-b sticky top-0 z-30">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-lg font-extrabold">Cockpit Agents IA : offres, candidatures et Gmail</h1>
+      <p class="text-xs text-slate-500"><span id="gs">Prêt. Aucune exécution automatique.</span> Dernière actualisation : <b id="gl">jamais</b></p>
     </div>
-  </header>
-
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-    <section class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status">
-      <strong>Mode sécurisé :</strong> aucune offre fictive n'est affichée. La recherche Adzuna utilise les variables ADZUNA_APP_ID et ADZUNA_APP_KEY de Vercel. Les liens Adzuna sont des redirections vers les annonces et ne sont pas présentés comme vérifiés. La clôture conserve une trace locale ; la connexion Gmail de cette application n'est pas encore installée et aucun email ne sera supprimé automatiquement.
-    </section>
-    <!-- INDICATEURS KPI -->
-    <section aria-label="Indicateurs clés">
-      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
-        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs">
-          <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">Offres suivies</div>
-          <div id="kpi-offers-total" class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2">0</div>
-          <p id="kpi-offers-sub" class="text-xs text-slate-500 mt-1">0 à postuler • 0 postulées</p>
-        </div>
-
-        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs">
-          <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">Matching moyen CVs</div>
-          <div id="kpi-avg-match" class="text-2xl sm:text-3xl font-extrabold text-indigo-700 mt-2">0%</div>
-          <p id="kpi-top-match" class="text-xs text-slate-500 mt-1">Meilleur score : 0%</p>
-        </div>
-
-        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs">
-          <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">Entretiens & Offres</div>
-          <div id="kpi-interviews-offers" class="text-2xl sm:text-3xl font-extrabold text-emerald-700 mt-2">0</div>
-          <p id="kpi-followups-sub" class="text-xs text-slate-500 mt-1">0 relance(s) à faire</p>
-        </div>
-
-        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs">
-          <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">Profils / CVs actifs</div>
-          <div id="kpi-cvs-count" class="text-2xl sm:text-3xl font-extrabold text-sky-700 mt-2">0</div>
-          <p id="kpi-active-cv-name" class="text-xs text-slate-500 mt-1 truncate">Mode : Meilleur CV auto</p>
-        </div>
-
-        <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-xs sm:col-span-2 xl:col-span-1">
-          <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">Agents IA</div>
-          <div id="kpi-agents-status" class="text-2xl sm:text-3xl font-extrabold text-amber-600 mt-2">En attente</div>
-          <p id="kpi-agents-count" class="text-xs text-slate-500 mt-1">0 agent(s) configuré(s)</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- GESTIONNAIRE DE CVS MULTIPLES & SÉLECTEUR DE RÉFÉRENCE -->
-    <section class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs space-y-4">
-      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 pb-4 border-b border-slate-100">
-        <div>
-          <h2 class="text-base sm:text-lg font-bold text-slate-900">Gestionnaire de CVs & Calcul Dynamique du Matching</h2>
-          <p class="text-xs sm:text-sm text-slate-500">
-            Trois CV de référence FR / EN / ES ; choisissez celui à comparer et validez la version adaptée avant chaque candidature
-          </p>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <label for="reference-cv-select" class="text-xs font-semibold text-slate-600">CV de référence pour l'affichage :</label>
-          <select
-            id="reference-cv-select"
-            class="px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-semibold bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-          >
-            <option value="BEST_AUTO">Meilleur CV correspondant (Automatique)</option>
-          </select>
-          <button
-            type="button"
-            id="btn-new-cv-inline"
-            class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold transition cursor-pointer"
-          >
-            + Nouveau CV
-          </button>
-        </div>
-      </div>
-
-      <div id="cv-cards-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
-    </section>
-
-    <!-- TABLEAU DE BORD COMPLET DES OFFRES D'EMPLOI -->
-    <section class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs space-y-4">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pb-4 border-b border-slate-100">
-        <div>
-          <h2 class="text-base sm:text-lg font-bold text-slate-900">Tableau de Bord des Offres d'Emploi</h2>
-          <p class="text-xs sm:text-sm text-slate-500">
-            Statuts interactifs, score de matching détaillé par CV, liens directs « Postuler → » avec copie et édition rapide
-          </p>
-        </div>
-        <div class="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl self-start md:self-auto">
-          <span>Offres affichées :</span>
-          <strong id="jobs-filtered-count" class="text-slate-900 text-sm">0</strong>
-        </div>
-      </div>
-
-      <!-- FILTRES & TRI DES OFFRES -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
-        <div class="lg:col-span-2 relative">
-          <label for="job-search" class="sr-only">Rechercher une offre</label>
-          <input
-            type="text"
-            id="job-search"
-            placeholder="Rechercher poste, entreprise, lieu, compétence..."
-            class="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-          <svg class="w-4 h-4 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z" />
-          </svg>
-        </div>
-
-        <div>
-          <label for="job-filter-status" class="sr-only">Filtrer par statut</label>
-          <select
-            id="job-filter-status"
-            class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          >
-            <option value="ALL">Tous statuts</option>
-            <option value="À postuler">À postuler</option>
-            <option value="Postulé">Postulé</option>
-            <option value="Entretien">Entretien</option>
-            <option value="Relance à faire">Relance à faire</option>
-            <option value="Offre reçue">Offre reçue</option>
-            <option value="Archivé">Archivé</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="job-filter-match" class="sr-only">Score de matching minimum</label>
-          <select
-            id="job-filter-match"
-            class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          >
-            <option value="0">Matching : Tous scores</option>
-            <option value="85">Matching ≥ 85% (Fort)</option>
-            <option value="70">Matching ≥ 70% (Bon)</option>
-            <option value="50">Matching ≥ 50% (Modéré)</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="job-filter-agent" class="sr-only">Filtrer par agent IA</label>
-          <select
-            id="job-filter-agent"
-            class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          >
-            <option value="ALL">Tous agents / sources</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="job-sort" class="sr-only">Trier les offres</label>
-          <select
-            id="job-sort"
-            class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          >
-            <option value="match_desc">Tri : Matching décroissant</option>
-            <option value="match_asc">Tri : Matching croissant</option>
-            <option value="date_desc">Tri : Plus récentes</option>
-            <option value="status_asc">Tri : Par statut</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- LISTE DES CARTES / OFFRES -->
-      <div id="jobs-list" class="space-y-4"></div>
-
-      <!-- ÉTAT VIDE -->
-      <div id="jobs-empty" class="hidden text-center py-10 px-4 border border-dashed border-slate-300 rounded-2xl bg-slate-50/70">
-        <p class="text-sm font-semibold text-slate-700">Aucune offre ne correspond aux filtres sélectionnés.</p>
-        <p class="text-xs text-slate-500 mt-1">Réinitialisez les filtres ou ajoutez une nouvelle offre manuellement.</p>
-        <button
-          type="button"
-          id="btn-reset-job-filters"
-          class="mt-3 px-4 py-2 rounded-xl bg-white border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer"
-        >
-          Réinitialiser les filtres
-        </button>
-      </div>
-    </section>
-
-    <!-- HISTORIQUE DES DOSSIERS CLÔTURÉS -->
-    <section class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs space-y-3">
-      <div class="flex items-center justify-between gap-3">
-        <div>
-          <h2 class="text-base sm:text-lg font-bold text-slate-900">Traçabilité des candidatures clôturées</h2>
-          <p class="text-xs text-slate-500">Historique conservé dans ce navigateur. Le nettoyage Gmail nécessite encore une connexion Google propre à l'application et une validation distincte.</p>
-        </div>
-        <span id="closed-cases-count" class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">0 dossier</span>
-      </div>
-      <div id="closed-cases-list" class="space-y-2"></div>
-    </section>
-
-    <!-- AGENTS IA DE RECHERCHE & MATCHING + JOURNAL D'ACTIVITÉ -->
-    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <!-- Agents IA (7 colonnes) -->
-      <div class="lg:col-span-7 bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs space-y-4">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-100">
-          <div>
-            <h2 class="text-base sm:text-lg font-bold text-slate-900">Agents IA de Veille, Qualification & Matching</h2>
-            <p class="text-xs text-slate-500">
-              Périmètre visé : Europe entière, Royaume-Uni inclus. La recherche réelle dépend des connecteurs et clés API configurés ; elle n’est pas encore exhaustive.
-            </p>
-          </div>
-          <button
-            type="button"
-            id="btn-open-agent-modal"
-            class="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition self-start sm:self-auto cursor-pointer"
-          >
-            + Ajouter un agent IA
-          </button>
-        </div>
-
-        <div id="agents-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5"></div>
-      </div>
-
-      <!-- Journal d'activité des Agents IA (5 colonnes) -->
-      <div class="lg:col-span-5 bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex flex-col">
-        <div class="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
-          <div>
-            <h2 class="text-base sm:text-lg font-bold text-slate-900">Journal d'Activité des Agents</h2>
-            <p class="text-xs text-slate-500">Découvertes d'offres et recalculs de matching déclenchés au clic</p>
-          </div>
-          <button
-            type="button"
-            id="btn-clear-logs"
-            class="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
-          >
-            Effacer
-          </button>
-        </div>
-
-        <div id="activity-log" class="mt-3 space-y-2.5 max-h-[380px] overflow-y-auto custom-scrollbar pr-1 flex-1"></div>
-      </div>
-    </section>
-  </main>
-
-  <!-- MODALE AJOUT / ÉDITION D'UNE OFFRE D'EMPLOI -->
-  <div
-    id="job-modal-backdrop"
-    class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-2xs items-center justify-center p-4 overflow-y-auto"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="job-modal-title"
-  >
-    <div class="bg-white rounded-2xl max-w-2xl w-full border border-slate-200 shadow-xl overflow-hidden my-auto">
-      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-        <h3 id="job-modal-title" class="text-base sm:text-lg font-bold text-slate-900">Ajouter une offre d'emploi</h3>
-        <button
-          type="button"
-          id="btn-close-job-modal"
-          class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-          aria-label="Fermer la fenêtre"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      <form id="form-job" class="p-6 space-y-4 max-h-[82vh] overflow-y-auto custom-scrollbar">
-        <input type="hidden" id="job-id" />
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label for="job-title" class="block text-xs font-semibold text-slate-700 mb-1">Intitulé du poste *</label>
-            <input
-              type="text"
-              id="job-title"
-              required
-              placeholder="Ex. Product Manager & Support Technique B2B"
-              class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </div>
-          <div>
-            <label for="job-company" class="block text-xs font-semibold text-slate-700 mb-1">Entreprise *</label>
-            <input
-              type="text"
-              id="job-company"
-              required
-              placeholder="Ex. AquaTech Europe"
-              class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label for="job-location" class="block text-xs font-semibold text-slate-700 mb-1">Localisation / Télétravail *</label>
-            <input
-              type="text"
-              id="job-location"
-              required
-              placeholder="Ex. Montpellier / Hybride"
-              class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </div>
-          <div>
-            <label for="job-status" class="block text-xs font-semibold text-slate-700 mb-1">Statut de candidature *</label>
-            <select
-              id="job-status"
-              class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-            >
-              <option value="À postuler">À postuler</option>
-              <option value="Postulé">Postulé</option>
-              <option value="Entretien">Entretien</option>
-              <option value="Relance à faire">Relance à faire</option>
-              <option value="Offre reçue">Offre reçue</option>
-              <option value="Archivé">Archivé</option>
-            </select>
-          </div>
-          <div>
-            <label for="job-source" class="block text-xs font-semibold text-slate-700 mb-1">Source / Agent IA</label>
-            <input
-              type="text"
-              id="job-source"
-              placeholder="Ex. Adzuna • Agent Veille Produit & Tech"
-              class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label for="job-url" class="block text-xs font-semibold text-slate-700 mb-1">Lien direct vers la fiche précise de l’offre (URL)</label>
-            <input
-              type="text"
-              id="job-url"
-              placeholder="Ex. https://www.linkedin.com/jobs/view/1234567890/"
-              class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </div>
-          <div>
-            <label for="job-salary" class="block text-xs font-semibold text-slate-700 mb-1">Rémunération / Contrat</label>
-            <input
-              type="text"
-              id="job-salary"
-              placeholder="Ex. 55k – 65k € • CDI"
-              class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label for="job-skills" class="block text-xs font-semibold text-slate-700 mb-1">
-            Compétences & mots-clés attendus (séparés par des virgules)
-          </label>
-          <input
-            type="text"
-            id="job-skills"
-            placeholder="Ex. product management, support technique, b2b, piscines, roadmap, anglais"
-            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-        </div>
-
-        <div>
-          <label for="job-notes" class="block text-xs font-semibold text-slate-700 mb-1">Notes & suivi de candidature</label>
-          <textarea
-            id="job-notes"
-            rows="2"
-            placeholder="Contexte du poste, contact, relance prévue..."
-            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-          ></textarea>
-        </div>
-
-        <div class="pt-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t border-slate-100">
-          <button
-            type="button"
-            id="btn-cancel-job-modal"
-            class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm font-medium transition cursor-pointer"
-          >
-            Annuler
-          </button>
-          <button
-            type="submit"
-            class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold shadow-xs transition cursor-pointer"
-          >
-            Enregistrer et calculer le matching
-          </button>
-        </div>
-      </form>
+    <div class="flex gap-2">
+      <button id="bAll" class="btn bg-indigo-700 text-white">Tout actualiser</button>
+      <button data-act="newjob" class="btn bg-emerald-700 text-white">Ajouter une offre</button>
+      <button data-act="reset" class="btn border border-rose-300 text-rose-700 bg-white">Réinitialiser</button>
     </div>
   </div>
+</header>
 
-  <!-- MODALE GESTIONNAIRE DE CVS -->
-  <div
-    id="cv-modal-backdrop"
-    class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-2xs items-center justify-center p-4 overflow-y-auto"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="cv-modal-title"
-  >
-    <div class="bg-white rounded-2xl max-w-2xl w-full border border-slate-200 shadow-xl overflow-hidden my-auto">
-      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-        <h3 id="cv-modal-title" class="text-base sm:text-lg font-bold text-slate-900">Ajouter ou modifier un CV</h3>
-        <button
-          type="button"
-          id="btn-close-cv-modal"
-          class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-          aria-label="Fermer la fenêtre"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
+<main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+  <p class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+    Aucune offre fictive. Les agents appellent des routes Vercel (<code>/api/adzuna</code>, <code>/api/francetravail</code>, <code>/api/careers</code>, <code>/api/gmail</code>). Une route absente s’affiche « Non installé ». Gmail se lit côté serveur (OAuth, lecture seule) : aucun mail n’est supprimé.
+  </p>
 
-      <form id="form-cv" class="p-6 space-y-4 max-h-[82vh] overflow-y-auto custom-scrollbar">
-        <input type="hidden" id="cv-id" />
+  <section id="kpis" class="grid grid-cols-2 xl:grid-cols-5 gap-3"></section>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label for="cv-name" class="block text-xs font-semibold text-slate-700 mb-1">Nom du CV / Profil *</label>
-            <input
-              type="text"
-              id="cv-name"
-              required
-              placeholder="Ex. CV Principal — Product / Ops / Tech"
-              class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <div>
-            <label for="cv-headline" class="block text-xs font-semibold text-slate-700 mb-1">Positionnement / Cible *</label>
-            <input
-              type="text"
-              id="cv-headline"
-              required
-              placeholder="Ex. Product Manager • Support Technique & Commercial B2B"
-              class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label for="cv-skills" class="block text-xs font-semibold text-slate-700 mb-1">
-            Compétences clés & mots-clés du CV (séparés par des virgules) *
-          </label>
-          <textarea
-            id="cv-skills"
-            rows="3"
-            required
-            placeholder="Ex. product management, support technique, b2b, piscines, traitement de l'eau, roadmap, relation client, anglais, espagnol"
-            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          ></textarea>
-        </div>
-
-        <div class="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 space-y-3">
-          <div>
-            <label for="cv-pdf-file" class="block text-xs font-semibold text-slate-700 mb-1">Importer le CV (PDF)</label>
-            <input id="cv-pdf-file" type="file" accept="application/pdf,.pdf" class="block w-full text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-3 file:py-2 file:text-white" />
-            <p id="cv-pdf-status" class="text-xs text-slate-500 mt-1">Le texte extrait sera contrôlable et modifiable ci-dessous. Les PDF scannés nécessitent un OCR.</p>
-          </div>
-          <div>
-            <label for="cv-raw-text" class="block text-xs font-semibold text-slate-700 mb-1">Texte brut du CV (extrait du PDF ou complété manuellement)</label>
-            <textarea id="cv-raw-text" rows="8" placeholder="Importez un PDF ou collez ici le texte du CV..." class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-            <p class="text-xs text-slate-500 mt-1">Si le texte contient des caractères incohérents, ne l'enregistrez pas : utilisez un PDF exporté depuis le document source ou un OCR fiable.</p>
-          </div>
-          <button type="button" id="btn-analyze-cv-text" class="px-3 py-2 rounded-lg bg-white border border-indigo-200 text-indigo-700 text-xs font-semibold hover:bg-indigo-100">Déduire la cible et les mots-clés du texte</button>
-        </div>
-
-        <div>
-          <label for="cv-summary" class="block text-xs font-semibold text-slate-700 mb-1">Résumé rapide du CV</label>
-          <textarea
-            id="cv-summary"
-            rows="2"
-            placeholder="Synthèse de votre valeur ajoutée pour ce positionnement..."
-            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          ></textarea>
-        </div>
-
-        <div class="pt-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t border-slate-100">
-          <button
-            type="button"
-            id="btn-cancel-cv-modal"
-            class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm font-medium transition cursor-pointer"
-          >
-            Annuler
-          </button>
-          <button
-            type="submit"
-            class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-xs transition cursor-pointer"
-          >
-            Enregistrer le CV et recalculer
-          </button>
-        </div>
-      </form>
+  <section class="bg-white rounded-xl border p-5 space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h2 class="font-bold">CV de référence (FR, EN, ES)</h2>
+      <select id="refcv" class="inp !w-auto"></select>
     </div>
-  </div>
+    <div id="cvs" class="grid md:grid-cols-3 gap-3"></div>
+  </section>
 
-  <!-- MODALE VALIDATION DU CV AVANT CANDIDATURE -->
-  <div id="application-modal-backdrop" class="fixed inset-0 z-[60] hidden bg-slate-900/60 backdrop-blur-sm items-center justify-center p-3 sm:p-5 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="application-modal-title">
-    <div class="bg-white rounded-2xl max-w-4xl w-full border border-slate-200 shadow-2xl overflow-hidden my-auto">
-      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
-        <div><h3 id="application-modal-title" class="font-bold text-slate-900">Valider le CV pour cette candidature</h3><p id="application-job-label" class="text-xs text-slate-500 mt-1"></p></div>
-        <button type="button" id="btn-close-application-modal" class="p-2 rounded-lg hover:bg-slate-100" aria-label="Fermer">✕</button>
-      </div>
-      <div class="p-5 space-y-4">
-        <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900">Vérifie la langue et le document. Le CV original ne sera pas écrasé. L'ouverture du site de candidature ne transmet pas automatiquement le fichier : tu devras le joindre sur le site du recruteur.</div>
-        <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4">
-          <div class="space-y-3">
-            <label for="application-cv-select" class="block text-xs font-semibold text-slate-700">CV à utiliser (suggestion automatique modifiable)</label>
-            <select id="application-cv-select" class="w-full rounded-xl border border-slate-300 p-3 text-sm"></select>
-            <p id="application-language-reason" class="text-xs text-slate-500"></p>
-            <label for="application-cv-file" class="block text-xs font-semibold text-slate-700">Joindre le PDF correspondant à ce CV (si nécessaire)</label>
-            <input id="application-cv-file" type="file" accept="application/pdf,.pdf" class="block w-full text-xs text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-sky-50 file:px-3 file:py-2 file:text-sky-700">
-            <p id="application-cv-file-status" class="text-xs text-slate-500">Le PDF doit être chargé pour activer la validation.</p>
-            <label class="flex gap-2 items-start text-sm text-slate-700"><input id="application-cv-approved" type="checkbox" class="mt-1" disabled> <span>J'ai relu et je valide ce CV pour cette candidature.</span></label>
-            <button id="btn-confirm-application" type="button" disabled class="w-full rounded-xl bg-sky-600 disabled:bg-slate-300 text-white font-semibold text-sm px-4 py-3">Valider le CV et ouvrir l'annonce</button>
-            <button id="btn-cancel-application" type="button" class="w-full rounded-xl border border-slate-300 text-slate-700 px-4 py-2 text-sm">Annuler</button>
-          </div>
-          <div class="min-h-[360px] border border-slate-200 rounded-xl overflow-hidden bg-slate-50"><iframe id="application-cv-preview" title="Aperçu du CV sélectionné" class="w-full h-[520px]" src="about:blank"></iframe></div>
-        </div>
-      </div>
+  <section class="bg-white rounded-xl border p-5 space-y-4">
+    <div class="flex items-center justify-between">
+      <h2 class="font-bold">Offres et candidatures</h2>
+      <span class="text-xs text-slate-600">Affichées : <b id="jcount">0</b></span>
     </div>
-  </div>
-
-  <!-- MODALE INSPECTER / AJOUTER UN AGENT IA -->
-  <div
-    id="agent-modal-backdrop"
-    class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-2xs items-center justify-center p-4 overflow-y-auto"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="agent-modal-title"
-  >
-    <div class="bg-white rounded-2xl max-w-xl w-full border border-slate-200 shadow-xl overflow-hidden my-auto">
-      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-        <h3 id="agent-modal-title" class="text-base sm:text-lg font-bold text-slate-900">Configurer un Agent IA</h3>
-        <button
-          type="button"
-          id="btn-close-agent-modal"
-          class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
-          aria-label="Fermer la fenêtre"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      <form id="form-agent" class="p-6 space-y-4">
-        <input type="hidden" id="agent-id" />
-
-        <div>
-          <label for="agent-name" class="block text-xs font-semibold text-slate-700 mb-1">Nom de l'agent IA *</label>
-          <input
-            type="text"
-            id="agent-name"
-            required
-            placeholder="Ex. Agent Veille Product & Tech B2B"
-            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-        </div>
-
-        <div>
-          <label for="agent-role" class="block text-xs font-semibold text-slate-700 mb-1">Rôle & mission *</label>
-          <input
-            type="text"
-            id="agent-role"
-            required
-            placeholder="Ex. Scanne Adzuna, LinkedIn & France Travail pour détecter des offres ciblées"
-            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-        </div>
-
-        <div>
-          <label for="agent-keywords" class="block text-xs font-semibold text-slate-700 mb-1">
-            Mots-clés / critères de veille (séparés par des virgules)
-          </label>
-          <input
-            type="text"
-            id="agent-keywords"
-            placeholder="Ex. product manager, support technique, traitement de l'eau, data, conseil"
-            class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
-          />
-        </div>
-
-        <div class="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100">
-          <button
-            type="button"
-            id="btn-delete-agent"
-            class="hidden px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition cursor-pointer"
-          >
-            Supprimer l'agent
-          </button>
-          <div class="flex items-center gap-2 ml-auto">
-            <button
-              type="button"
-              id="btn-cancel-agent-modal"
-              class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-xs sm:text-sm font-medium transition cursor-pointer"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs sm:text-sm font-semibold transition cursor-pointer"
-            >
-              Enregistrer l'agent
-            </button>
-          </div>
-        </div>
-      </form>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-2">
+      <input id="fq" class="inp" placeholder="Poste, entreprise, lieu, mot-clé">
+      <select id="fst" class="inp"></select>
+      <select id="fmin" class="inp"><option value="0">Tous scores</option><option value="70">Matching 70 % et plus</option><option value="50">Matching 50 % et plus</option></select>
+      <select id="fso" class="inp"><option value="match">Matching décroissant</option><option value="date">Plus récentes</option><option value="status">Par statut</option></select>
     </div>
-  </div>
+    <div id="jobs" class="space-y-3"></div>
+    <p id="jempty" class="hidden text-sm text-slate-500 text-center py-8 border border-dashed rounded-xl">Aucune offre. Lance « Tout actualiser » ou ajoute une offre.</p>
+  </section>
 
-  <script>
-    // =========================================================================
-    // CONSTANTES & CONFIGURATION
-    // =========================================================================
-    const STORAGE_KEY = 'cockpit_agents_offres_cvs_v1';
+  <section class="bg-white rounded-xl border p-5 space-y-3">
+    <h2 class="font-bold">Retours Gmail (depuis avril 2026)</h2>
+    <div id="mails" class="space-y-2"></div>
+  </section>
 
-    const JOB_STATUSES = [
-      'À postuler',
-      'Postulé',
-      'Entretien',
-      'Relance à faire',
-      'Offre reçue',
-      'Archivé',
-      'Clôturé'
-    ];
+  <section class="grid lg:grid-cols-12 gap-6">
+    <div class="lg:col-span-8 bg-white rounded-xl border p-5 space-y-3">
+      <h2 class="font-bold">Agents (7)</h2>
+      <div id="agents" class="grid sm:grid-cols-2 gap-3"></div>
+    </div>
+    <div class="lg:col-span-4 bg-white rounded-xl border p-5 flex flex-col">
+      <div class="flex items-center justify-between"><h2 class="font-bold">Journal</h2><button data-act="clearlog" class="text-xs text-slate-500 underline">Effacer</button></div>
+      <div id="log" class="mt-3 space-y-2 max-h-96 overflow-y-auto"></div>
+    </div>
+  </section>
+</main>
 
-    const JOB_STATUS_STYLES = {
-      'À postuler': 'bg-sky-50 text-sky-800 border-sky-200',
-      'Postulé': 'bg-indigo-50 text-indigo-800 border-indigo-200',
-      'Entretien': 'bg-violet-50 text-violet-800 border-violet-200',
-      'Relance à faire': 'bg-amber-50 text-amber-800 border-amber-200',
-      'Offre reçue': 'bg-emerald-50 text-emerald-800 border-emerald-200',
-      'Archivé': 'bg-slate-100 text-slate-600 border-slate-200',
-      'Clôturé': 'bg-slate-200 text-slate-700 border-slate-300'
-    };
+<dialog id="jm" class="rounded-2xl p-0 w-full max-w-xl">
+  <form id="fj" class="p-6 space-y-3">
+    <h3 id="jmt" class="font-bold">Offre</h3>
+    <input type="hidden" id="j-id">
+    <div class="grid sm:grid-cols-2 gap-3">
+      <input id="j-title" class="inp" placeholder="Intitulé du poste *" required>
+      <input id="j-company" class="inp" placeholder="Entreprise *" required>
+      <input id="j-location" class="inp" placeholder="Lieu ou télétravail">
+      <select id="j-status" class="inp"></select>
+    </div>
+    <input id="j-url" class="inp" placeholder="URL précise de l’annonce (https://…)">
+    <input id="j-skills" class="inp" placeholder="Mots-clés attendus, séparés par des virgules">
+    <textarea id="j-notes" rows="3" class="inp" placeholder="Notes, contact, relance prévue"></textarea>
+    <div class="flex justify-end gap-2">
+      <button type="button" data-act="closejm" class="btn border bg-white">Annuler</button>
+      <button type="submit" class="btn bg-emerald-700 text-white">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
 
-    const AGENT_STATUS_STYLES = {
-      'En attente': 'bg-amber-50 text-amber-800 border-amber-200',
-      "En cours d'exécution": 'bg-sky-50 text-sky-800 border-sky-200',
-      'Terminé': 'bg-emerald-50 text-emerald-800 border-emerald-200',
-      'Erreur': 'bg-rose-50 text-rose-800 border-rose-200'
-    };
+<script>
+const KEY = 'cockpit_v2', OLD = 'cockpit_agents_offres_cvs_v1';
+const ST = ['À postuler','Postulé','Relance à faire','Entretien','Offre reçue','Refusé','Archivé','Clôturé'];
+const RANK = {'À postuler':0,'Postulé':1,'Relance à faire':2,'Entretien':3,'Offre reçue':4,'Refusé':4};
+const STC = {'À postuler':'bg-sky-50 text-sky-800 border-sky-200','Postulé':'bg-indigo-50 text-indigo-800 border-indigo-200','Relance à faire':'bg-amber-50 text-amber-800 border-amber-200','Entretien':'bg-violet-50 text-violet-800 border-violet-200','Offre reçue':'bg-emerald-50 text-emerald-800 border-emerald-200','Refusé':'bg-rose-50 text-rose-800 border-rose-200','Archivé':'bg-slate-100 text-slate-600 border-slate-200','Clôturé':'bg-slate-200 text-slate-700 border-slate-300'};
+const AGC = {'En attente':'bg-slate-100 text-slate-700 border-slate-200','En cours':'bg-sky-50 text-sky-800 border-sky-200','Terminé':'bg-emerald-50 text-emerald-800 border-emerald-200','Erreur':'bg-rose-50 text-rose-800 border-rose-200','Non installé':'bg-amber-50 text-amber-800 border-amber-200'};
+const EU = ['gb','fr','de','nl','be','at','ch','it','es','pl','se','no','dk','ie','pt'];
+const AGENTS = [
+ {id:'a1',type:'adzuna',name:'Direction commerciale Europe',role:'Adzuna, 15 pays : directeur commercial, head of sales, country manager.',q:['Commercial Director','Sales Director Head of Sales','Country Manager'],countries:EU},
+ {id:'a2',type:'adzuna',name:'Piscine, spa et traitement de l’eau',role:'Adzuna : postes commerciaux piscine, spa, wellness, chimie de l’eau.',q:['pool sales manager','water treatment sales manager','spa wellness business manager'],countries:EU},
+ {id:'a3',type:'adzuna',name:'Export, channel et développement',role:'Adzuna : export, réseaux de distribution, business development B2B.',q:['Export Director','Channel Manager','Business Development Manager B2B'],countries:EU},
+ {id:'a4',type:'api',endpoint:'/api/francetravail',name:'France Travail',role:'Offres officielles France Travail (route à créer sur Vercel).'},
+ {id:'a5',type:'api',endpoint:'/api/careers',name:'Sites carrières et candidatures directes',role:'Marché caché : pages carrières des fabricants piscine, spa, wellness (route à créer).'},
+ {id:'a6',type:'gmail',endpoint:'/api/gmail',name:'Gmail : candidatures et retours',role:'Lit les accusés, refus, entretiens ; met à jour les statuts (route OAuth à créer).'},
+ {id:'a7',type:'local',name:'Matching, doublons et relances',role:'Recalcule les scores, retire les doublons, passe en relance après 10 jours sans retour.'}
+];
+const CVS = [
+ {id:'cv-damien-fr',language:'fr',name:'CV Damien Enfrin (français)',headline:'Directeur commercial France et International',skills:['direction commerciale','business development','B2B','export','Europe','distribution','channel','management','OEM','hydraulique','pompage','traitement de l’eau','piscine','spa','REACH','anglais','espagnol']},
+ {id:'cv-damien-en',language:'en',name:'CV Damien Enfrin (English)',headline:'Commercial Director France and International',skills:['commercial director','sales director','head of sales','business development','B2B','export','EMEA','distribution','channel','P&L','OEM','private label','water treatment','pumping','pool','spa','REACH']},
+ {id:'cv-damien-es',language:'es',name:'CV Damien Enfrin (Español)',headline:'Director Comercial Francia e Internacional',skills:['director comercial','desarrollo de negocio','ventas B2B','exportación','Europa','redes de distribución','marca blanca','tratamiento de agua','bombeo','piscinas','spas','REACH']}
+];
 
-    const DEFAULT_CVS = [
-      { id: 'cv-damien-fr', name: 'CV Damien Enfrin — Français', language: 'fr', headline: 'Directeur commercial France & International | Business Development', skills: ['direction commerciale','sales director','head of sales','business development','B2B','export','Europe','EMEA','LATAM','distribution','channel management','P&L','management','OEM','MDD','industrie','hydraulique','pompage','traitement de l’eau','piscine','spa','HVAC','REACH','ACS','CE','anglais','espagnol'], summary: 'Direction commerciale et opérationnelle B2B, développement international, réseaux de distribution et produits techniques.' },
-      { id: 'cv-damien-en', name: 'CV Damien Enfrin — English', language: 'en', headline: 'Commercial Director France & International | Business Development', skills: ['commercial director','sales director','head of sales','business development','B2B sales','export','Europe','EMEA','LATAM','distribution networks','channel management','P&L','leadership','OEM','private label','industrial equipment','water treatment','pumping','HVAC','pools','spas','REACH','CE','French','Spanish'], summary: 'Commercial and operations leadership, international B2B growth, distribution networks and technical industrial products.' },
-      { id: 'cv-damien-es', name: 'CV Damien Enfrin — Español', language: 'es', headline: 'Director Comercial Francia e Internacional | Business Development', skills: ['dirección comercial','director comercial','desarrollo de negocio','ventas B2B','exportación','Europa','EMEA','LATAM','redes de distribución','channel management','P&L','management','OEM','marca blanca','equipamiento industrial','tratamiento de agua','bombeo','climatización','piscinas','spas','REACH','CE','francés','inglés'], summary: 'Dirección comercial y de operaciones, crecimiento B2B internacional, redes de distribución y productos técnicos industriales.' }
-    ];
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nt = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+const now = () => new Date().toLocaleString('fr-FR');
+const days = d => { const n = (Date.now() - new Date(d)) / 864e5; return isNaN(n) ? 0 : n; };
+const csv = s => String(s).split(/[,;\n]+/).map(x => x.trim()).filter(Boolean);
+const rid = () => 'j' + Date.now() + Math.random().toString(36).slice(2,6);
+function cleanUrl(u){ u = String(u||'').trim(); if(!u) return ''; try { const p = new URL(/^https?:\/\//i.test(u) ? u : 'https://' + u); return (p.pathname.replace(/\/+$/,'') === '' && !p.search) ? '' : p.href; } catch { return ''; } }
+function toast(m, t='info'){ const e = document.createElement('div'); e.className = 'px-4 py-3 rounded-xl text-sm font-semibold text-white shadow-lg ' + (t==='error'?'bg-rose-800':t==='success'?'bg-emerald-800':'bg-slate-800'); e.textContent = m; $('toasts').appendChild(e); setTimeout(() => e.remove(), 3500); }
 
-    // Aucune offre fictive préchargée : seules les annonces réellement ajoutées/importées sont affichées.
-    const DEFAULT_JOBS = [];
+let S = {cvs:[],jobs:[],logs:[],mails:[],ref:'BEST',last:null,ag:{},running:false,f:{q:'',st:'ALL',min:0,sort:'match'}};
+function load(){
+  let r = null; try { r = JSON.parse(localStorage.getItem(KEY) || localStorage.getItem(OLD) || 'null'); } catch {}
+  S.cvs = r?.cvs?.length && r.cvs.every(c => c.language) ? r.cvs : structuredClone(CVS);
+  S.jobs = (r?.jobs || []).map(j => ({...j, url: cleanUrl(j.url)}));
+  S.logs = r?.logs || []; S.mails = r?.mails || []; S.ag = r?.ag || {};
+  S.ref = r?.ref || r?.referenceCvMode || 'BEST'; if (S.ref === 'BEST_AUTO') S.ref = 'BEST';
+  S.last = r?.last || r?.lastGlobalRefresh || null;
+}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify({cvs:S.cvs,jobs:S.jobs,logs:S.logs,mails:S.mails,ref:S.ref,last:S.last,ag:S.ag})); } catch { toast('Sauvegarde locale impossible (espace plein).','error'); } }
+function log(agent, message, badge){ S.logs.unshift({time:now(),agent,message,badge}); S.logs = S.logs.slice(0,60); }
 
-    const DEFAULT_AGENTS = [
-      {
-        id: 'agent-1',
-        name: 'Agent Veille Produit & Tech',
-        role: 'Veille multilingue des postes commerciaux et techniques sur les marchés européens, Royaume-Uni inclus ; qualification des liens directs.',
-        keywords: ['product management', 'support technique', 'b2b', 'piscines', 'traitement de l\'eau'],
-        status: 'En attente',
-        lastRun: null,
-        candidateJob: null
-      },
-      {
-        id: 'agent-2',
-        name: 'Agent Veille Data & IA',
-        role: 'Recherche des postes de direction commerciale, export, développement de marchés et management B2B dans toute l’Europe.',
-        keywords: ['Commercial Director','Sales Director','Country Manager','Export Director','International Sales','Channel Director','EMEA'],
-        status: 'En attente',
-        lastRun: null,
-        candidateJob: null
-      },
-      {
-        id: 'agent-3',
-        name: 'Agent Veille Conseil & Management',
-        role: 'Recherche les fonctions de direction des opérations, business development et conseil commercial en Europe et au Royaume-Uni.',
-        keywords: ['Operations Director','Business Development Director','General Manager','Commercial Strategy','B2B consulting','France','UK','Europe'],
-        status: 'En attente',
-        lastRun: null,
-        candidateJob: null
-      },
-      {
-        id: 'agent-4',
-        name: 'Agent Matching CVs & Écarts',
-        role: 'Recalcule dynamiquement le score de matching et les compétences manquantes pour chaque offre et chaque CV',
-        keywords: ['matching', 'compétences', 'cv', 'score'],
-        status: 'En attente',
-        lastRun: null,
-        candidateJob: null
-      }
-    ];
+function match(j){
+  const t = nt(`${j.title} ${j.company} ${j.notes} ${(j.skills||[]).join(' ')}`);
+  const ev = S.cvs.map(cv => { const m = cv.skills.filter(s => t.includes(nt(s))); return {cv, m, score: m.length ? Math.min(98, 35 + m.length*9) : 20}; }).sort((a,b) => b.score - a.score);
+  return (S.ref !== 'BEST' && ev.find(e => e.cv.id === S.ref)) || ev[0] || {cv:{name:'Aucun CV'},m:[],score:0};
+}
+const findJob = (co, ti) => S.jobs.find(j => nt(j.company) === nt(co) && nt(j.title) === nt(ti));
 
-    // =========================================================================
-    // ÉTAT DE L'APPLICATION (AUCUN LANCEMENT AUTO AU CHARGEMENT)
-    // =========================================================================
-    let state = {
-      cvs: [],
-      jobs: [],
-      agents: [],
-      logs: [],
-      closedCases: [],
-      referenceCvMode: 'BEST_AUTO',
-      lastGlobalRefresh: null,
-      isRefreshing: false,
-      filters: {
-        search: '',
-        status: 'ALL',
-        minMatch: 0,
-        agent: 'ALL',
-        sort: 'match_desc'
-      }
-    };
-
-    // =========================================================================
-    // UTILITAIRES
-    // =========================================================================
-    function escapeHTML(str = '') {
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+async function getJSON(u){
+  const r = await fetch(u, {headers:{Accept:'application/json'}}); let p = {};
+  try { p = await r.json(); } catch {}
+  if (!r.ok) throw new Error(p.error || `HTTP ${r.status} ${u.split('?')[0]}`);
+  return p;
+}
+const toRow = (o, c, a) => ({title:o.poste||o.title||'', company:o.entreprise||o.company||'', location:o.localisation||o.location||'', url:o.lien_offre||o.url||o.redirect_url||'', desc:o.description||'', date:(o.date_publication||o.created||'').slice(0,10), country:o.pays||c||'', salary:[o.salaire_min??o.salary_min,o.salaire_max??o.salary_max].filter(x=>x!=null).map(x=>Math.round(x).toLocaleString('fr-FR')).join(' à '), src:a.name});
+function ingest(rows, errs){
+  let added = 0;
+  for (const o of rows){
+    const url = cleanUrl(o.url); if (!url || !o.title || findJob(o.company, o.title)) continue;
+    S.jobs.unshift({id:rid(), title:o.title, company:o.company, location:o.location, url, salary:o.salary?o.salary+' (source)':'', source:o.src+(o.country?' • '+o.country.toUpperCase():''), notes:String(o.desc).slice(0,900), skills:[], status:'À postuler', date:o.date||new Date().toISOString().slice(0,10)});
+    added++;
+  }
+  if (!rows.length && errs.length) throw new Error(errs[0]);
+  return {msg:`${rows.length} reçues, ${added} nouvelle(s)${errs.length?`, ${errs.length} requête(s) en erreur`:''}.`};
+}
+async function runAdzuna(a){
+  const tasks = a.countries.flatMap(c => a.q.map(q => ({c,q}))), rows = [], errs = []; let i = 0;
+  await Promise.all([0,1,2,3,4].map(async () => { while (i < tasks.length){ const t = tasks[i++]; try { const p = await getJSON(`/api/adzuna?country=${t.c}&q=${encodeURIComponent(t.q)}&page=1`); rows.push(...(p.offres||[]).map(o => toRow(o,t.c,a))); } catch(e){ errs.push(e.message); } } }));
+  return ingest(rows, errs);
+}
+async function runApi(a){ const p = await getJSON(a.endpoint); return ingest((p.offres||[]).map(o => toRow(o,'',a)), []); }
+async function runGmail(a){
+  const p = await getJSON(a.endpoint + '?since=2026-04-01'), ev = p.evenements || []; let upd = 0, add = 0;
+  S.mails = ev.slice().sort((x,y) => String(y.date).localeCompare(String(x.date))).slice(0,100);
+  for (const e of ev){
+    let j = findJob(e.entreprise, e.poste) || (S.jobs.filter(x => nt(x.company) === nt(e.entreprise)).length === 1 ? S.jobs.find(x => nt(x.company) === nt(e.entreprise)) : null);
+    if (j){ if (j.status !== 'Clôturé' && (RANK[e.statut] ?? 0) >= (RANK[j.status] ?? 0) && j.status !== e.statut){ j.status = e.statut; upd++; } if (!j.lastMail || e.date > j.lastMail) j.lastMail = e.date; }
+    else if (e.entreprise){ S.jobs.unshift({id:rid(), title:e.poste||'Poste non précisé', company:e.entreprise, location:'', url:'', salary:'', source:'Gmail', notes:e.sujet||'', skills:[], status:e.statut||'Postulé', date:e.date||new Date().toISOString().slice(0,10), appliedAt:e.date, lastMail:e.date}); add++; }
+  }
+  return {msg:`${ev.length} mail(s) analysé(s), ${upd} statut(s) mis à jour, ${add} candidature(s) ajoutée(s).`};
+}
+function runLocal(){
+  const seen = new Set(), before = S.jobs.length; let rel = 0;
+  S.jobs = S.jobs.filter(j => { const k = nt(j.company)+'|'+nt(j.title); if (seen.has(k)) return false; seen.add(k); return true; });
+  S.jobs.forEach(j => { if (j.status === 'Postulé' && days(j.lastMail || j.appliedAt || j.date) > 10){ j.status = 'Relance à faire'; rel++; } });
+  return {msg:`${before - S.jobs.length} doublon(s) retiré(s), ${rel} relance(s) à faire, scores recalculés.`};
+}
+async function run(ids){
+  if (S.running) return; S.running = true; $('bAll').disabled = true; $('gs').textContent = 'Agents en cours…';
+  for (const a of AGENTS.filter(x => !ids || ids.includes(x.id))){
+    S.ag[a.id] = {...S.ag[a.id], status:'En cours'}; renderAgents();
+    try {
+      const r = a.type==='adzuna' ? await runAdzuna(a) : a.type==='gmail' ? await runGmail(a) : a.type==='api' ? await runApi(a) : runLocal();
+      S.ag[a.id] = {status:'Terminé', lastRun:now(), msg:r.msg}; log(a.name, r.msg, 'Terminé');
+    } catch(e){
+      const miss = /HTTP 404/.test(e.message);
+      S.ag[a.id] = {status: miss ? 'Non installé' : 'Erreur', lastRun:now(), msg:e.message};
+      log(a.name, miss ? `Route ${a.endpoint || '/api/adzuna'} absente sur Vercel : à créer.` : e.message, miss ? 'Non installé' : 'Erreur');
     }
-
-    function normalizeToken(str = '') {
-      return String(str)
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .trim();
-    }
-
-    function parseCommaList(raw = '') {
-      return String(raw)
-        .split(/[,;\n]+/)
-        .map((s) => s.trim())
-        .filter(Boolean);
-    }
-
-    // A syntactically valid URL is not necessarily a job-detail URL.
-    // Reject homepages, search pages and generic job-category pages globally.
-    function sanitizeUrl(url = '') {
-      const trimmed = String(url).trim();
-      if (!trimmed) return '';
-      const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-      try {
-        const parsed = new URL(candidate);
-        if (!['https:', 'http:'].includes(parsed.protocol) || !parsed.hostname) return '';
-        const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
-        const path = parsed.pathname.replace(/\/+$/, '') || '/';
-        const lowerPath = path.toLowerCase();
-        const query = parsed.searchParams;
-
-        // Root domains can never identify one particular vacancy.
-        if (path === '/' && !parsed.search) return '';
-
-        // Known job-board listing/search roots (not individual vacancy pages).
-        const genericPatterns = [
-          /^\/jobs?$/i, /^\/jobs?\/(?:search|collections?|categories?|browse|discover|recommendations?)$/i,
-          /^\/emploi(?:s)?$/i, /^\/offres?-emploi$/i, /^\/careers?$/i,
-          /^\/career-opportunities$/i, /^\/vacatures?$/i, /^\/stellenangebote$/i,
-          /^\/trabajo(?:s)?$/i, /^\/empleos?$/i, /^\/search(?:\/jobs?)?$/i,
-          /^\/job-search$/i, /^\/jobseekers?$/i
-        ];
-        if (genericPatterns.some((pattern) => pattern.test(lowerPath))) return '';
-
-        if (host.endsWith('linkedin.com')) {
-          if (!/^\/jobs\/view\/\d+\/?$/i.test(parsed.pathname)) return '';
-        } else if (host.endsWith('indeed.com') || host.endsWith('indeed.co.uk') || host.endsWith('indeed.fr') || host.endsWith('indeed.de') || host.endsWith('indeed.es')) {
-          if (!/^\/viewjob\/?$/i.test(parsed.pathname) || !query.get('jk')) return '';
-        } else if (host.endsWith('glassdoor.com') || host.endsWith('glassdoor.co.uk') || host.endsWith('glassdoor.fr')) {
-          if (!/\/job-listing\//i.test(parsed.pathname) && !/\/Job\//i.test(parsed.pathname)) return '';
-        } else if (host.endsWith('adzuna.com') || host.startsWith('adzuna.')) {
-          if (!(/^\/jobs\/land\/ad\/[^/]+/i.test(parsed.pathname) || /^\/details\/[^/]+/i.test(parsed.pathname))) return '';
-        } else if (host.endsWith('reed.co.uk')) {
-          if (!/^\/jobs\/.+\/\d+/i.test(parsed.pathname)) return '';
-        } else if (host.endsWith('monster.com') || host.endsWith('monster.co.uk')) {
-          if (!/\/job-openings?\//i.test(parsed.pathname)) return '';
-        }
-        return parsed.href;
-      } catch (_) { return ''; }
-      return '';
-    }
-
-    function formatTimestamp(date = new Date()) {
-      return date.toLocaleString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      });
-    }
-
-    function showToast(message, type = 'info') {
-      const container = document.getElementById('toast-container');
-      if (!container) return;
-
-      const styles = {
-        success: 'bg-emerald-900 text-white border-emerald-700',
-        error: 'bg-rose-900 text-white border-rose-700',
-        info: 'bg-slate-900 text-white border-slate-700'
-      };
-
-      const el = document.createElement('div');
-      el.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-lg text-xs sm:text-sm font-medium transition-all duration-200 ${styles[type] || styles.info}`;
-      el.textContent = message;
-      container.appendChild(el);
-
-      setTimeout(() => {
-        el.classList.add('opacity-0', 'translate-y-1');
-        setTimeout(() => el.remove(), 220);
-      }, 3200);
-    }
-
-    function saveState() {
-      try {
-        const payload = {
-          cvs: state.cvs,
-          jobs: state.jobs,
-          agents: state.agents,
-          logs: state.logs,
-          closedCases: state.closedCases,
-          referenceCvMode: state.referenceCvMode,
-          lastGlobalRefresh: state.lastGlobalRefresh
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-      } catch (err) {
-        console.error('Erreur localStorage :', err);
-        showToast('Erreur de sauvegarde locale.', 'error');
-      }
-    }
-
-    function loadState() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) {
-          seedDefaultState();
-          return;
-        }
-        const parsed = JSON.parse(raw);
-        state.cvs = Array.isArray(parsed.cvs) && parsed.cvs.length ? parsed.cvs : structuredClone(DEFAULT_CVS);
-        if (state.cvs.some((cv) => ['cv-product-tech','cv-data-ia','cv-management-conseil'].includes(cv.id))) state.cvs = structuredClone(DEFAULT_CVS);
-        state.jobs = Array.isArray(parsed.jobs) ? parsed.jobs.filter((job) => !/^job-[1-6]$/.test(String(job?.id || ''))).map((job) => ({ ...job, url: sanitizeUrl(job?.url || '') })) : structuredClone(DEFAULT_JOBS);
-        state.agents = Array.isArray(parsed.agents) && parsed.agents.length ? parsed.agents : structuredClone(DEFAULT_AGENTS);
-        state.logs = Array.isArray(parsed.logs) ? parsed.logs : [];
-        state.closedCases = Array.isArray(parsed.closedCases) ? parsed.closedCases : [];
-        state.referenceCvMode = parsed.referenceCvMode || 'BEST_AUTO';
-        state.lastGlobalRefresh = parsed.lastGlobalRefresh || null;
-
-        // Garantie absolue : au chargement initial, aucun agent n'est en exécution automatique
-        state.isRefreshing = false;
-        state.agents = state.agents.map((ag) => ({
-          ...ag,
-          status: ag.status === "En cours d'exécution" ? 'En attente' : (ag.status || 'En attente')
-        }));
-      } catch (err) {
-        console.error('Erreur lecture localStorage :', err);
-        seedDefaultState();
-      }
-    }
-
-    function seedDefaultState() {
-      state.cvs = structuredClone(DEFAULT_CVS);
-      state.jobs = structuredClone(DEFAULT_JOBS);
-      state.agents = structuredClone(DEFAULT_AGENTS);
-      state.referenceCvMode = 'BEST_AUTO';
-      state.lastGlobalRefresh = null;
-      state.isRefreshing = false;
-      state.closedCases = [];
-      state.logs = [
-        {
-          id: 'log-init',
-          time: 'Prêt',
-          agentName: 'Système Cockpit',
-          message: 'En attente — aucune actualisation automatique au chargement. Cliquez sur « Tout actualiser » pour lancer les agents IA.',
-          badge: 'En attente'
-        }
-      ];
-    }
-
-    // =========================================================================
-    // MOTEUR DE MATCHING DYNAMIQUE (OFFRE <-> CVS)
-    // =========================================================================
-    function computeMatchWithCv(job, cv) {
-      const jobSkills = Array.isArray(job.skills) ? job.skills.filter(Boolean) : [];
-      const cvSkills = Array.isArray(cv.skills) ? cv.skills.filter(Boolean) : [];
-
-      const jobTextNormalized = normalizeToken(
-        `${job.title || ''} ${job.company || ''} ${job.location || ''} ${job.notes || ''} ${jobSkills.join(' ')}`
-      );
-
-      if (jobSkills.length === 0) {
-        const matchedFromText = cvSkills.filter((sk) => jobTextNormalized.includes(normalizeToken(sk)));
-        const score = cvSkills.length > 0 ? Math.min(95, Math.max(45, Math.round((matchedFromText.length / Math.min(cvSkills.length, 6)) * 100))) : 60;
-        return {
-          cvId: cv.id,
-          cvName: cv.name,
-          score,
-          matched: matchedFromText,
-          missing: []
-        };
-      }
-
-      const matched = [];
-      const missing = [];
-
-      jobSkills.forEach((reqSkill) => {
-        const normReq = normalizeToken(reqSkill);
-        const foundInCv = cvSkills.some((cvSkill) => {
-          const normCv = normalizeToken(cvSkill);
-          return normCv.includes(normReq) || normReq.includes(normCv);
-        });
-        const foundInText = jobTextNormalized.includes(normReq);
-
-        if (foundInCv || foundInText) {
-          matched.push(reqSkill);
-        } else {
-          missing.push(reqSkill);
-        }
-      });
-
-      const rawScore = Math.round((matched.length / jobSkills.length) * 100);
-      const score = Math.max(20, Math.min(100, rawScore));
-
-      return {
-        cvId: cv.id,
-        cvName: cv.name,
-        score,
-        matched,
-        missing
-      };
-    }
-
-    function evaluateJobMatching(job) {
-      if (!state.cvs.length) {
-        return {
-          score: 50,
-          cvId: null,
-          cvName: 'Aucun CV',
-          matched: [],
-          missing: [],
-          allEvaluations: []
-        };
-      }
-
-      const allEvaluations = state.cvs
-        .map((cv) => computeMatchWithCv(job, cv))
-        .sort((a, b) => b.score - a.score);
-
-      if (state.referenceCvMode && state.referenceCvMode !== 'BEST_AUTO') {
-        const selectedEval = allEvaluations.find((ev) => ev.cvId === state.referenceCvMode);
-        if (selectedEval) {
-          return { ...selectedEval, allEvaluations };
-        }
-      }
-
-      return { ...allEvaluations[0], allEvaluations };
-    }
-
-    function getMatchColorClasses(score) {
-      if (score >= 80) {
-        return {
-          badge: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-          bar: 'bg-emerald-600',
-          text: 'text-emerald-700'
-        };
-      }
-      if (score >= 60) {
-        return {
-          badge: 'bg-sky-50 text-sky-800 border-sky-200',
-          bar: 'bg-sky-600',
-          text: 'text-sky-700'
-        };
-      }
-      return {
-        badge: 'bg-amber-50 text-amber-800 border-amber-200',
-        bar: 'bg-amber-500',
-        text: 'text-amber-700'
-      };
-    }
-
-    // =========================================================================
-    // EXÉCUTION DES AGENTS IA (DÉCLENCHÉE UNIQUEMENT AU CLIC)
-    // =========================================================================
-    function appendLog(agentName, message, badge = 'Terminé') {
-      state.logs.unshift({
-        id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        time: formatTimestamp(new Date()),
-        agentName,
-        message,
-        badge
-      });
-      if (state.logs.length > 60) {
-        state.logs = state.logs.slice(0, 60);
-      }
-    }
-
-    function buildAdzunaSearchTerms() {
-      // Requêtes ciblées, volontairement limitées pour éviter de saturer le quota API.
-      return [
-        'Commercial Director Sales Director Head of Sales',
-        'Business Development Director Country Manager Export Director',
-        'Operations Director General Manager Commercial Manager'
-      ];
-    }
-
-    function adzunaSalary(job) {
-      if (job.salary_min == null && job.salary_max == null) return '';
-      const min = job.salary_min != null ? Math.round(job.salary_min).toLocaleString('fr-FR') : '';
-      const max = job.salary_max != null ? Math.round(job.salary_max).toLocaleString('fr-FR') : '';
-      return `${min}${min && max ? ' – ' : ''}${max} (estimation/source Adzuna)`;
-    }
-
-    async function fetchAdzunaCountryQuery(country, query) {
-      const endpoint = `/api/adzuna?country=${encodeURIComponent(country)}&q=${encodeURIComponent(query)}&page=1`;
-      const response = await fetch(endpoint, { headers: { Accept: 'application/json' } });
-      let payload = {};
-      try { payload = await response.json(); } catch (_) {}
-      if (!response.ok) throw new Error(payload.error || `Erreur Adzuna HTTP ${response.status} (${country})`);
-      if (!Array.isArray(payload.offres)) throw new Error(payload.error || `Réponse Adzuna invalide (${country})`);
-      return payload.offres.map((item) => ({
-        id_source: item.id_source || item.id || null,
-        country: item.pays || country,
-        title: item.poste || item.title || '',
-        company: item.entreprise || item.company || '',
-        location: item.localisation || item.location || '',
-        url: item.lien_offre || item.redirect_url || '',
-        description: item.description || '',
-        created: item.date_publication || item.created || null,
-        salary_min: item.salaire_min ?? item.salary_min ?? null,
-        salary_max: item.salaire_max ?? item.salary_max ?? null,
-        link_status: 'adzuna_redirect_unverified'
-      }));
-    }
-
-    async function runAdzunaSearch(agent) {
-      const countries = ['gb','fr','de','nl','be','at','ch','it','es','pl','se','no','dk','ie','pt'];
-      const queries = buildAdzunaSearchTerms();
-      const tasks = countries.flatMap(country => queries.map(query => ({ country, query })));
-      const allResults = [];
-      const errors = [];
-      let cursor = 0;
-      const worker = async () => {
-        while (cursor < tasks.length) {
-          const task = tasks[cursor++];
-          try {
-            const rows = await fetchAdzunaCountryQuery(task.country, task.query);
-            allResults.push(...rows);
-          } catch (error) {
-            errors.push(`${task.country}/${task.query}: ${error.message}`);
-          }
-        }
-      };
-      await Promise.all(Array.from({ length: 5 }, () => worker()));
-
-      const seen = new Set();
-      let added = 0;
-      for (const item of allResults) {
-        const url = sanitizeUrl(item.url || '');
-        if (!url || !item.id_source) continue;
-        const key = `adzuna:${item.country}:${item.id_source}`;
-        if (seen.has(key) || state.jobs.some(job => job.externalId === key || (normalizeToken(job.title) === normalizeToken(item.title) && normalizeToken(job.company) === normalizeToken(item.company)))) continue;
-        seen.add(key);
-        const job = {
-          id: `adzuna-${item.country}-${item.id_source}`,
-          externalId: key,
-          title: item.title,
-          company: item.company,
-          location: item.location,
-          salary: adzunaSalary(item),
-          source: `Adzuna • ${item.country.toUpperCase()} • ${agent?.name || 'Veille Europe'}`,
-          url,
-          notes: `${String(item.description || '').slice(0, 900)}\nAnnonce remontée par Adzuna. Lien individuel de redirection Adzuna ; disponibilité finale à confirmer sur le site recruteur.`,
-          skills: (agent?.keywords || []).slice(0, 12),
-          status: 'À postuler',
-          date: item.created ? String(item.created).slice(0, 10) : new Date().toISOString().slice(0, 10),
-          adzunaCountry: item.country,
-          linkVerification: item.link_status || 'not_verified'
-        };
-        state.jobs.unshift(job);
-        added++;
-      }
-      return { fetched: allResults.length, added, errors };
-    }
-
-    async function runAgents(targetAgentId = null) {
-      if (state.isRefreshing) return;
-      state.isRefreshing = true;
-      const btnAll = document.getElementById('btn-refresh-all');
-      const iconAll = document.getElementById('icon-refresh-all');
-      btnAll.disabled = true;
-      btnAll.classList.add('opacity-75');
-      iconAll.classList.add('animate-spin');
-      const agentsToRun = targetAgentId ? state.agents.filter(a => a.id === targetAgentId) : state.agents;
-      agentsToRun.forEach(agent => { agent.status = "En cours d'exécution"; });
-      document.getElementById('global-refresh-status').textContent = 'Recherche Adzuna en cours sur les marchés européens et au Royaume-Uni…';
-      renderAgents();
-      renderKPIs();
-
-      try {
-        // Les agents de matching ne déclenchent pas de requêtes distinctes : un cycle de recherche Adzuna est partagé.
-        const searchAgent = agentsToRun.find(a => a.id !== 'agent-4') || agentsToRun[0];
-        const result = await runAdzunaSearch(searchAgent);
-        const stamp = formatTimestamp(new Date());
-        agentsToRun.forEach(agent => { agent.status = result.errors.length && !result.fetched ? 'Erreur' : (result.fetched ? 'Terminé' : 'En attente'); agent.lastRun = stamp; });
-        state.lastGlobalRefresh = stamp;
-        document.getElementById('global-last-refresh').textContent = stamp;
-        document.getElementById('global-refresh-status').textContent = result.errors.length && !result.fetched ? `Échec de recherche : ${result.errors.length} erreur(s), aucune offre récupérée.` : `${result.added} nouvelle(s) offre(s) ajoutée(s) via Adzuna • ${result.fetched} résultat(s) récupéré(s)`;
-        appendLog('Recherche Adzuna Europe', `${result.fetched} résultat(s) reçus ; ${result.added} nouvelle(s) offre(s) ajoutée(s). ${result.errors.length} requête(s) en erreur.`, result.errors.length && !result.fetched ? 'Erreur' : 'Terminé');
-        if (result.errors.length) console.warn('Erreurs Adzuna partielles:', result.errors.slice(0, 8));
-        saveState();
-        renderAll();
-        if (!result.fetched && result.errors.length) showToast(`Recherche impossible : ${result.errors[0]}`, 'error');
-        else if (!result.added) showToast(`${result.fetched} résultat(s) Adzuna récupéré(s), aucune nouvelle offre (doublons possibles).`, 'info');
-        else showToast(`${result.added} nouvelle(s) offre(s) Adzuna ajoutée(s) en Europe.`, 'success');
-      } catch (error) {
-        console.error('Erreur moteur Adzuna:', error);
-        agentsToRun.forEach(agent => { agent.status = 'Erreur'; });
-        appendLog('Recherche Adzuna Europe', error.message || 'Erreur inconnue', 'Erreur');
-        saveState(); renderAll();
-        showToast(error.message || 'La recherche Adzuna a échoué.', 'error');
-      } finally {
-        state.isRefreshing = false;
-        btnAll.disabled = false;
-        btnAll.classList.remove('opacity-75');
-        iconAll.classList.remove('animate-spin');
-      }
-    }
-
-    // =========================================================================
-    // RENDU KPI
-    // =========================================================================
-    function renderKPIs() {
-      const totalJobs = state.jobs.length;
-      const toApplyCount = state.jobs.filter((j) => j.status === 'À postuler').length;
-      const appliedCount = state.jobs.filter((j) => j.status === 'Postulé').length;
-      const interviewOrOfferCount = state.jobs.filter((j) => j.status === 'Entretien' || j.status === 'Offre reçue').length;
-      const followUpCount = state.jobs.filter((j) => j.status === 'Relance à faire').length;
-
-      const matches = state.jobs.map((j) => evaluateJobMatching(j).score);
-      const avgMatch = matches.length > 0 ? Math.round(matches.reduce((a, b) => a + b, 0) / matches.length) : 0;
-      const topMatch = matches.length > 0 ? Math.max(...matches) : 0;
-
-      document.getElementById('kpi-offers-total').textContent = String(totalJobs);
-      document.getElementById('kpi-offers-sub').textContent = `${toApplyCount} à postuler • ${appliedCount} postulées`;
-
-      document.getElementById('kpi-avg-match').textContent = `${avgMatch}%`;
-      document.getElementById('kpi-top-match').textContent = `Meilleur score : ${topMatch}%`;
-
-      document.getElementById('kpi-interviews-offers').textContent = String(interviewOrOfferCount);
-      document.getElementById('kpi-followups-sub').textContent = `${followUpCount} relance(s) à faire`;
-
-      document.getElementById('kpi-cvs-count').textContent = String(state.cvs.length);
-      if (state.referenceCvMode === 'BEST_AUTO') {
-        document.getElementById('kpi-active-cv-name').textContent = 'Mode : Meilleur CV auto';
-      } else {
-        const foundCv = state.cvs.find((c) => c.id === state.referenceCvMode);
-        document.getElementById('kpi-active-cv-name').textContent = `CV : ${foundCv ? foundCv.name : 'Sélectionné'}`;
-      }
-
-      const runningCount = state.agents.filter((a) => a.status === "En cours d'exécution").length;
-      const doneCount = state.agents.filter((a) => a.status === 'Terminé').length;
-      const agentStatusEl = document.getElementById('kpi-agents-status');
-
-      if (runningCount > 0) {
-        agentStatusEl.textContent = 'En cours';
-        agentStatusEl.className = 'text-2xl sm:text-3xl font-extrabold text-sky-700 mt-2';
-      } else if (doneCount === state.agents.length && state.agents.length > 0) {
-        agentStatusEl.textContent = 'Terminé';
-        agentStatusEl.className = 'text-2xl sm:text-3xl font-extrabold text-emerald-700 mt-2';
-      } else {
-        agentStatusEl.textContent = 'En attente';
-        agentStatusEl.className = 'text-2xl sm:text-3xl font-extrabold text-amber-600 mt-2';
-      }
-      document.getElementById('kpi-agents-count').textContent = `${state.agents.length} agent(s) • ${doneCount} terminé(s)`;
-    }
-
-    // =========================================================================
-    // RENDU GESTIONNAIRE DE CVS
-    // =========================================================================
-    function renderCvSelectorAndCards() {
-      const selectEl = document.getElementById('reference-cv-select');
-      const currentVal = state.referenceCvMode;
-
-      selectEl.innerHTML =
-        `<option value="BEST_AUTO" ${currentVal === 'BEST_AUTO' ? 'selected' : ''}>Meilleur CV correspondant (Automatique)</option>` +
-        state.cvs
-          .map(
-            (cv) =>
-              `<option value="${escapeHTML(cv.id)}" ${currentVal === cv.id ? 'selected' : ''}>${escapeHTML(cv.name)}</option>`
-          )
-          .join('');
-
-      const gridEl = document.getElementById('cv-cards-grid');
-      if (!state.cvs.length) {
-        gridEl.innerHTML = `<div class="col-span-full text-sm text-slate-500 py-4">Aucun CV enregistré. Cliquez sur « + Nouveau CV ».</div>`;
-        return;
-      }
-
-      gridEl.innerHTML = state.cvs
-        .map((cv) => {
-          const isSelected = state.referenceCvMode === cv.id;
-          const matchingOffersCount = state.jobs.filter((job) => {
-            const best = [...state.cvs].map((c) => computeMatchWithCv(job, c)).sort((a, b) => b.score - a.score)[0];
-            return best && best.cvId === cv.id;
-          }).length;
-
-          const skillsBadges = (cv.skills || [])
-            .slice(0, 6)
-            .map(
-              (sk) =>
-                `<span class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">${escapeHTML(sk)}</span>`
-            )
-            .join('');
-
-          return `
-            <div class="rounded-2xl border ${isSelected ? 'border-indigo-500 ring-2 ring-indigo-100 bg-indigo-50/20' : 'border-slate-200 bg-slate-50/60'} p-4 flex flex-col justify-between gap-3">
-              <div>
-                <div class="flex items-start justify-between gap-2">
-                  <div>
-                    <h3 class="text-sm font-bold text-slate-900">${escapeHTML(cv.name)}</h3>
-                    <p class="text-xs font-medium text-indigo-700 mt-0.5">${escapeHTML(cv.headline)}</p>
-                  </div>
-                  <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-white text-slate-700 border border-slate-200 shrink-0">
-                    ${matchingOffersCount} top match
-                  </span>
-                </div>
-                ${cv.summary ? `<p class="text-xs text-slate-600 mt-2 line-clamp-2">${escapeHTML(cv.summary)}</p>` : ''}
-                <div class="flex flex-wrap gap-1 mt-2.5">
-                  ${skillsBadges}
-                  ${(cv.skills || []).length > 6 ? `<span class="text-[11px] text-slate-500 font-medium">+${cv.skills.length - 6}</span>` : ''}
-                </div>
-              </div>
-
-              <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-200/70">
-                <button
-                  type="button"
-                  data-use-cv="${escapeHTML(cv.id)}"
-                  class="px-2.5 py-1.5 rounded-lg text-xs font-semibold ${isSelected ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'} transition cursor-pointer"
-                >
-                  ${isSelected ? 'CV actif' : 'Utiliser ce CV'}
-                </button>
-                <div class="flex items-center gap-1">
-                  <button
-                    type="button"
-                    data-edit-cv="${escapeHTML(cv.id)}"
-                    class="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-200/70 transition cursor-pointer"
-                  >
-                    Modifier
-                  </button>
-                  ${
-                    state.cvs.length > 1
-                      ? `<button
-                          type="button"
-                          data-delete-cv="${escapeHTML(cv.id)}"
-                          class="px-2 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 transition cursor-pointer"
-                          title="Supprimer ce CV"
-                        >
-                          Suppr.
-                        </button>`
-                      : ''
-                  }
-                </div>
-              </div>
-            </div>
-          `;
-        })
-        .join('');
-    }
-
-    // =========================================================================
-    // RENDU TABLEAU DE BORD DES OFFRES D'EMPLOI
-    // =========================================================================
-    function populateAgentFilterOptions() {
-      const selectEl = document.getElementById('job-filter-agent');
-      const current = state.filters.agent;
-      const sources = Array.from(
-        new Set([
-          ...state.agents.map((a) => a.name),
-          ...state.jobs.map((j) => j.source).filter(Boolean)
-        ])
-      );
-
-      selectEl.innerHTML =
-        `<option value="ALL" ${current === 'ALL' ? 'selected' : ''}>Tous agents / sources</option>` +
-        sources
-          .map((src) => `<option value="${escapeHTML(src)}" ${current === src ? 'selected' : ''}>${escapeHTML(src)}</option>`)
-          .join('');
-    }
-
-    function getFilteredAndSortedJobs() {
-      const q = normalizeToken(state.filters.search);
-      const enriched = state.jobs.map((job) => ({
-        job,
-        match: evaluateJobMatching(job)
-      }));
-
-      const filtered = enriched.filter(({ job, match }) => {
-        if (state.filters.status !== 'ALL' && job.status !== state.filters.status) return false;
-        if (match.score < Number(state.filters.minMatch || 0)) return false;
-        if (state.filters.agent !== 'ALL') {
-          const src = normalizeToken(job.source || '');
-          const filterAg = normalizeToken(state.filters.agent);
-          if (!src.includes(filterAg) && src !== filterAg) return false;
-        }
-        if (q) {
-          const hay = normalizeToken(
-            `${job.title} ${job.company} ${job.location} ${job.source} ${job.notes} ${(job.skills || []).join(' ')} ${match.cvName}`
-          );
-          if (!hay.includes(q)) return false;
-        }
-        return true;
-      });
-
-      filtered.sort((a, b) => {
-        switch (state.filters.sort) {
-          case 'match_asc':
-            return a.match.score - b.match.score;
-          case 'date_desc':
-            return String(b.job.date || '').localeCompare(String(a.job.date || ''));
-          case 'status_asc':
-            return JOB_STATUSES.indexOf(a.job.status) - JOB_STATUSES.indexOf(b.job.status);
-          case 'match_desc':
-          default:
-            return b.match.score - a.match.score;
-        }
-      });
-
-      return filtered;
-    }
-
-    function renderJobs() {
-      populateAgentFilterOptions();
-      const rows = getFilteredAndSortedJobs();
-      const listEl = document.getElementById('jobs-list');
-      const emptyEl = document.getElementById('jobs-empty');
-      document.getElementById('jobs-filtered-count').textContent = String(rows.length);
-
-      if (!rows.length) {
-        listEl.innerHTML = '';
-        emptyEl.classList.remove('hidden');
-        return;
-      }
-
-      emptyEl.classList.add('hidden');
-
-      listEl.innerHTML = rows
-        .map(({ job, match }) => {
-          const mColors = getMatchColorClasses(match.score);
-          const statusStyle = JOB_STATUS_STYLES[job.status] || 'bg-slate-100 text-slate-700 border-slate-200';
-          const safeUrl = sanitizeUrl(job.url);
-
-          const statusOptions = JOB_STATUSES.map(
-            (st) => `<option value="${escapeHTML(st)}" ${job.status === st ? 'selected' : ''}>${escapeHTML(st)}</option>`
-          ).join('');
-
-          const matchedTags = match.matched
-            .slice(0, 5)
-            .map(
-              (sk) =>
-                `<span class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">✓ ${escapeHTML(sk)}</span>`
-            )
-            .join('');
-
-          const missingTags = match.missing
-            .slice(0, 4)
-            .map(
-              (sk) =>
-                `<span class="px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">△ ${escapeHTML(sk)}</span>`
-            )
-            .join('');
-
-          return `
-            <article class="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 hover:border-slate-300 transition shadow-2xs">
-              <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                <!-- Informations principales de l'offre -->
-                <div class="space-y-2 flex-1 min-w-0">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <h3 class="text-base font-bold text-slate-900">${escapeHTML(job.title)}</h3>
-                    <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                      ${escapeHTML(job.company)}
-                    </span>
-                    ${
-                      job.source
-                        ? `<span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-sky-50 text-sky-700 border border-sky-200">${escapeHTML(job.source)}</span>`
-                        : ''
-                    }
-                  </div>
-
-                  <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
-                    <span><strong>Lieu :</strong> ${escapeHTML(job.location || 'Non précisé')}</span>
-                    ${job.salary ? `<span><strong>Rémunération :</strong> ${escapeHTML(job.salary)}</span>` : ''}
-                    <span><strong>Date :</strong> ${escapeHTML(job.date || '—')}</span>
-                  </div>
-
-                  ${job.notes ? `<p class="text-xs sm:text-sm text-slate-600 bg-slate-50 rounded-xl px-3 py-2 border border-slate-100">${escapeHTML(job.notes)}</p>` : ''}
-
-                  <!-- Détail du matching par rapport aux CVs -->
-                  <div class="pt-1 space-y-1.5">
-                    <div class="flex flex-wrap items-center gap-2 text-xs">
-                      <span class="font-semibold text-slate-700">CV aligné :</span>
-                      <span class="font-semibold text-indigo-700">${escapeHTML(match.cvName)}</span>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-1.5">
-                      ${matchedTags}
-                      ${missingTags}
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Score de matching, sélecteur de statut & lien Postuler -->
-                <div class="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end justify-between gap-3 lg:w-64 shrink-0 border-t lg:border-t-0 lg:border-l border-slate-100 pt-3 lg:pt-0 lg:pl-4">
-                  <!-- Badge & barre de matching -->
-                  <div class="w-full">
-                    <div class="flex items-center justify-between gap-2 mb-1">
-                      <span class="text-xs font-semibold text-slate-500">Matching CV</span>
-                      <span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${mColors.badge}">
-                        ${match.score}%
-                      </span>
-                    </div>
-                    <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div class="h-full ${mColors.bar} rounded-full transition-all duration-300" style="width: ${match.score}%"></div>
-                    </div>
-                  </div>
-
-                  <!-- Sélecteur de statut modifiable -->
-                  <div class="w-full">
-                    <label for="status-select-${escapeHTML(job.id)}" class="block text-[11px] font-semibold text-slate-500 mb-1">
-                      Statut de candidature
-                    </label>
-                    <select
-                      id="status-select-${escapeHTML(job.id)}"
-                      data-job-status-id="${escapeHTML(job.id)}"
-                      class="w-full px-3 py-2 rounded-xl text-xs font-bold border ${statusStyle} focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
-                    >
-                      ${statusOptions}
-                    </select>
-                  </div>
-
-                  <!-- Bouton Postuler + actions lien / édition / suppression -->
-                  <div class="w-full flex flex-wrap items-center gap-1.5 pt-0.5">
-                    ${
-                      safeUrl
-                        ? `<a href="${escapeHTML(safeUrl)}" target="_blank" rel="noopener noreferrer" class="flex-1 inline-flex items-center justify-center gap-1 px-3.5 py-2 rounded-xl border border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-bold transition">Voir l'annonce ↗</a><button type="button" data-apply-job="${escapeHTML(job.id)}" class="flex-1 inline-flex items-center justify-center gap-1 px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-2xs transition">Préparer ma candidature →</button>`
-                        : `<button type="button" disabled aria-disabled="true" title="Lien individuel absent ou non reconnu : l'agent doit retrouver l'URL de l'annonce" class="flex-1 inline-flex items-center justify-center gap-1 px-3.5 py-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-bold cursor-not-allowed">Voir l'annonce — lien manquant</button><button type="button" data-edit-job="${escapeHTML(job.id)}" class="flex-1 inline-flex items-center justify-center gap-1 px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-semibold transition cursor-pointer">Ajouter lien</button>`
-                    }
-
-                    <button
-                      type="button"
-                      data-copy-url="${escapeHTML(job.id)}"
-                      class="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer"
-                      title="Copier le lien direct de l’offre"
-                    >
-                      Copier
-                    </button>
-
-                    <button
-                      type="button"
-                      data-edit-job="${escapeHTML(job.id)}"
-                      class="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition cursor-pointer"
-                      title="Modifier l'offre ou son lien"
-                    >
-                      Éditer
-                    </button>
-
-                    <button
-                      type="button"
-                      data-delete-job="${escapeHTML(job.id)}"
-                      class="px-2.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold transition cursor-pointer"
-                      title="Supprimer l'offre"
-                    >
-                      Suppr.
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </article>
-          `;
-        })
-        .join('');
-    }
-
-    // =========================================================================
-    // RENDU AGENTS IA & JOURNAL D'ACTIVITÉ
-    // =========================================================================
-    function renderAgents() {
-      const gridEl = document.getElementById('agents-grid');
-      if (!state.agents.length) {
-        gridEl.innerHTML = `<div class="col-span-full text-sm text-slate-500 py-4">Aucun agent IA configuré.</div>`;
-        return;
-      }
-
-      gridEl.innerHTML = state.agents
-        .map((ag) => {
-          const stClass = AGENT_STATUS_STYLES[ag.status] || AGENT_STATUS_STYLES['En attente'];
-          const kwBadges = (ag.keywords || [])
-            .slice(0, 4)
-            .map(
-              (k) =>
-                `<span class="px-2 py-0.5 rounded-md text-[11px] bg-slate-100 text-slate-600 border border-slate-200">${escapeHTML(k)}</span>`
-            )
-            .join('');
-
-          return `
-            <div class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 flex flex-col justify-between gap-3">
-              <div>
-                <div class="flex items-start justify-between gap-2">
-                  <h3 class="text-sm font-bold text-slate-900">${escapeHTML(ag.name)}</h3>
-                  <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${stClass} shrink-0">
-                    ${escapeHTML(ag.status || 'En attente')}
-                  </span>
-                </div>
-                <p class="text-xs text-slate-600 mt-1.5 leading-relaxed">${escapeHTML(ag.role)}</p>
-                <div class="flex flex-wrap gap-1 mt-2.5">${kwBadges}</div>
-              </div>
-
-              <div class="pt-2.5 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-2">
-                <span class="text-[11px] text-slate-500">
-                  ${ag.lastRun ? `Dernier run : ${escapeHTML(ag.lastRun)}` : 'Jamais exécuté'}
-                </span>
-                <div class="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    data-run-agent="${escapeHTML(ag.id)}"
-                    ${state.isRefreshing ? 'disabled' : ''}
-                    class="px-2.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-xs font-semibold transition cursor-pointer"
-                  >
-                    Lancer
-                  </button>
-                  <button
-                    type="button"
-                    data-inspect-agent="${escapeHTML(ag.id)}"
-                    class="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs font-semibold transition cursor-pointer"
-                  >
-                    Inspecter
-                  </button>
-                </div>
-              </div>
-            </div>
-          `;
-        })
-        .join('');
-    }
-
-    function renderActivityLog() {
-      const logEl = document.getElementById('activity-log');
-      if (!state.logs.length) {
-        logEl.innerHTML = `<div class="text-xs text-slate-500 py-6 text-center">Aucune activité enregistrée.</div>`;
-        return;
-      }
-
-      logEl.innerHTML = state.logs
-        .map((entry) => {
-          const badgeCls = AGENT_STATUS_STYLES[entry.badge] || 'bg-slate-100 text-slate-700 border-slate-200';
-          return `
-            <div class="rounded-xl border border-slate-200/90 bg-slate-50/70 p-3 space-y-1">
-              <div class="flex items-center justify-between gap-2">
-                <span class="text-xs font-bold text-slate-800">${escapeHTML(entry.agentName)}</span>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border ${badgeCls}">${escapeHTML(entry.badge)}</span>
-              </div>
-              <p class="text-xs text-slate-600 leading-snug">${escapeHTML(entry.message)}</p>
-              <div class="text-[10px] text-slate-400">${escapeHTML(entry.time)}</div>
-            </div>
-          `;
-        })
-        .join('');
-    }
-
-    function renderClosedCases() {
-      const list = document.getElementById('closed-cases-list');
-      const cases = Array.isArray(state.closedCases) ? state.closedCases : [];
-      document.getElementById('closed-cases-count').textContent = `${cases.length} dossier${cases.length > 1 ? 's' : ''}`;
-      if (!cases.length) {
-        list.innerHTML = '<p class="text-xs text-slate-500 py-3">Aucun dossier clôturé pour le moment. Passe le statut d’une candidature à « Clôturé » pour conserver sa trace ici.</p>';
-        return;
-      }
-      list.innerHTML = cases.map((item) => `
-        <article class="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-            <div class="min-w-0">
-              <p class="text-sm font-bold text-slate-800">${escapeHTML(item.title || 'Poste non renseigné')} — ${escapeHTML(item.company || 'Entreprise non renseignée')}</p>
-              <p class="text-xs text-slate-500">${escapeHTML(item.location || '')} ${item.source ? '• ' + escapeHTML(item.source) : ''}</p>
-              <p class="mt-1 text-xs text-slate-600">Clôturé le ${escapeHTML(item.closedAt ? new Date(item.closedAt).toLocaleString('fr-FR') : 'date inconnue')}</p>
-            </div>
-            <span class="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800">Gmail : non nettoyé</span>
-          </div>
-          <p class="mt-2 text-xs text-slate-500">${escapeHTML(item.note || 'Trace de clôture conservée localement.')}</p>
-          ${item.url ? `<a class="mt-2 inline-block text-xs font-semibold text-sky-700 underline" href="${escapeHTML(item.url)}" target="_blank" rel="noopener noreferrer">Ouvrir l’annonce d’origine</a>` : ''}
-        </article>`).join('');
-    }
-
-    function renderAll() {
-      renderKPIs();
-      renderCvSelectorAndCards();
-      renderJobs();
-      renderAgents();
-      renderActivityLog();
-      renderClosedCases();
-    }
-
-    // =========================================================================
-    // MODALES (OFFRE, CV, AGENT IA)
-    // =========================================================================
-    function toggleModal(backdropId, show) {
-      const el = document.getElementById(backdropId);
-      if (!el) return;
-      if (show) {
-        el.classList.remove('hidden');
-        el.classList.add('flex');
-      } else {
-        el.classList.add('hidden');
-        el.classList.remove('flex');
-      }
-    }
-
-    function openJobModal(job = null) {
-      document.getElementById('form-job').reset();
-      if (job) {
-        document.getElementById('job-modal-title').textContent = "Modifier l'offre d'emploi";
-        document.getElementById('job-id').value = job.id;
-        document.getElementById('job-title').value = job.title || '';
-        document.getElementById('job-company').value = job.company || '';
-        document.getElementById('job-location').value = job.location || '';
-        document.getElementById('job-status').value = job.status || 'À postuler';
-        document.getElementById('job-source').value = job.source || 'Manuel';
-        document.getElementById('job-url').value = job.url || '';
-        document.getElementById('job-salary').value = job.salary || '';
-        document.getElementById('job-skills').value = (job.skills || []).join(', ');
-        document.getElementById('job-notes').value = job.notes || '';
-      } else {
-        document.getElementById('job-modal-title').textContent = "Ajouter une offre d'emploi";
-        document.getElementById('job-id').value = '';
-        document.getElementById('job-status').value = 'À postuler';
-        document.getElementById('job-source').value = 'Ajout manuel';
-      }
-      toggleModal('job-modal-backdrop', true);
-      document.getElementById('job-title').focus();
-    }
-
-    let pendingCvPdfData = null;
-    function openCvModal(cv = null) {
-      pendingCvPdfData = cv?.pdfDataUri || null;
-      document.getElementById('form-cv').reset();
-      if (cv) {
-        document.getElementById('cv-modal-title').textContent = 'Modifier le CV';
-        document.getElementById('cv-id').value = cv.id;
-        document.getElementById('cv-name').value = cv.name || '';
-        document.getElementById('cv-headline').value = cv.headline || '';
-        document.getElementById('cv-skills').value = (cv.skills || []).join(', ');
-        document.getElementById('cv-summary').value = cv.summary || '';
-        document.getElementById('cv-raw-text').value = cv.rawText || '';
-      } else {
-        document.getElementById('cv-modal-title').textContent = 'Ajouter un nouveau CV';
-        document.getElementById('cv-id').value = '';
-      }
-      toggleModal('cv-modal-backdrop', true);
-      document.getElementById('cv-name').focus();
-    }
-
-    function openAgentModal(agent = null) {
-      document.getElementById('form-agent').reset();
-      const delBtn = document.getElementById('btn-delete-agent');
-      if (agent) {
-        document.getElementById('agent-modal-title').textContent = `Inspecter / Configurer : ${agent.name}`;
-        document.getElementById('agent-id').value = agent.id;
-        document.getElementById('agent-name').value = agent.name || '';
-        document.getElementById('agent-role').value = agent.role || '';
-        document.getElementById('agent-keywords').value = (agent.keywords || []).join(', ');
-        delBtn.classList.toggle('hidden', state.agents.length <= 1);
-      } else {
-        document.getElementById('agent-modal-title').textContent = 'Ajouter un Agent IA';
-        document.getElementById('agent-id').value = '';
-        delBtn.classList.add('hidden');
-      }
-      toggleModal('agent-modal-backdrop', true);
-      document.getElementById('agent-name').focus();
-    }
-
-    // =========================================================================
-    // ÉCOUTEURS D'ÉVÉNEMENTS
-    // =========================================================================
-    function inferCvFieldsFromText() {
-      const raw = document.getElementById('cv-raw-text').value || '';
-      const text = normalizeToken(raw);
-      if (text.length < 80) {
-        showToast('Ajoutez un texte de CV suffisamment complet avant de lancer l’analyse.', 'error');
-        return;
-      }
-      const profiles = [
-        { title: 'Product Manager / Chef de Produit', terms: ['product manager','chef de produit','roadmap','product owner','strategie produit','gestion de produit','lancement produit'] },
-        { title: 'Management de projets / Opérations', terms: ['gestion de projet','pilotage operationnel','management','amelioration continue','process','coordination','transformation'] },
-        { title: 'Développement commercial B2B', terms: ['developpement commercial','commercial b2b','negociation','grands comptes','prospection','chiffre affaires','relation client'] },
-        { title: 'Support technique / Expertise produit', terms: ['support technique','sav','assistance technique','formation technique','diagnostic','qualite','documentation technique'] },
-        { title: 'Data / Reporting / Automatisation', terms: ['data','business intelligence','power bi','sql','reporting','kpi','automatisation','analytics'] }
-      ];
-      const ranked = profiles.map(p => ({...p, score:p.terms.reduce((n,t)=>n+(text.includes(normalizeToken(t))?1:0),0)})).sort((a,b)=>b.score-a.score);
-      const best = ranked[0];
-      const vocabulary = ['product management','product owner','roadmap','gestion de projet','pilotage opérationnel','management','développement commercial','B2B','négociation','grands comptes','support technique','SAV','qualité','formation','relation client','data','Power BI','SQL','KPI','reporting','automatisation','amélioration continue','coordination','budget','fournisseurs','industrie','anglais','espagnol'];
-      const detected = vocabulary.filter(term => text.includes(normalizeToken(term)));
-      if (best && best.score > 0) document.getElementById('cv-headline').value = best.title;
-      if (detected.length) {
-        const existing = parseCommaList(document.getElementById('cv-skills').value);
-        document.getElementById('cv-skills').value = [...new Set([...detected, ...existing])].join(', ');
-      }
-      if (!document.getElementById('cv-summary').value.trim()) {
-        const sentences = raw.replace(/\s+/g,' ').split(/(?<=[.!?])\s+/).filter(x => x.length > 45);
-        document.getElementById('cv-summary').value = sentences.slice(0,2).join(' ').slice(0,500);
-      }
-      showToast(`Analyse terminée : cible proposée${best?.score ? ` (${best.title})` : ''}, ${detected.length} mot(s)-clé(s) détecté(s). Vérifiez et corrigez les suggestions.`, 'success');
-    }
-
-    async function extractPdfText(file) {
-      const status = document.getElementById('cv-pdf-status');
-      if (!file || file.type !== 'application/pdf') {
-        status.textContent = 'Veuillez sélectionner un fichier PDF.';
-        return;
-      }
-      if (!window.pdfjsLib) {
-        status.textContent = 'Le moteur PDF est indisponible. Vous pouvez coller le texte manuellement.';
-        return;
-      }
-      status.textContent = 'Extraction du texte PDF en cours…';
-      try {
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        const bytes = await file.arrayBuffer();
-        const pdf = await window.pdfjsLib.getDocument({data: bytes}).promise;
-        const pages = [];
-        for (let pageNo = 1; pageNo <= pdf.numPages; pageNo++) {
-          const page = await pdf.getPage(pageNo);
-          const content = await page.getTextContent();
-          const lines = [];
-          let lastY = null;
-          for (const item of content.items) {
-            if (!item.str) continue;
-            const y = item.transform?.[5];
-            if (lastY !== null && y !== undefined && Math.abs(y-lastY) > 3) lines.push('\n');
-            lines.push(item.str);
-            lines.push(' ');
-            if (y !== undefined) lastY = y;
-          }
-          pages.push(lines.join('').replace(/[ \t]+\n/g,'\n').trim());
-        }
-        const extracted = pages.join('\n\n').replace(/\u0000/g,'').trim();
-        document.getElementById('cv-raw-text').value = extracted;
-        const replacement = (extracted.match(/�/g) || []).length;
-        if (extracted.length < 100 || replacement > Math.max(3, extracted.length * 0.01)) {
-          status.textContent = 'Extraction incomplète ou encodage suspect. Ce PDF semble scanné/protégé ou mal encodé : vérifiez le texte et utilisez un OCR si nécessaire.';
-        } else {
-          status.textContent = `Extraction terminée : ${pdf.numPages} page(s), ${extracted.length.toLocaleString('fr-FR')} caractères. Cliquez sur « Déduire la cible… » pour obtenir des suggestions.`;
-        }
-      } catch (error) {
-        console.error('PDF extraction error:', error);
-        status.textContent = 'Impossible de lire ce PDF. Essayez un PDF texte non protégé ou collez le texte manuellement.';
-      }
-    }
-
-    let pendingApplicationJobId = null;
-    function suggestedCvLanguage(job) {
-      const text = normalizeToken(`${job.location || ''} ${job.title || ''} ${job.notes || ''}`);
-      if (/united kingdom|\buk\b|london|manchester|birmingham|scotland|england|wales|ireland/.test(text)) return 'en';
-      if (/espana|spain|barcelona|madrid|valencia|portugal|mexico|chile|argentina/.test(text)) return 'es';
-      if (/france|paris|lyon|marseille|perpignan|belgique|belgium|suisse|switzerland|luxembourg/.test(text)) return 'fr';
-      return 'en';
-    }
-    function showApplicationModal(job) {
-      if (!job || !sanitizeUrl(job.url || '')) { showToast('Lien direct de candidature manquant ou invalide. Modifie cette offre et ajoute son URL exacte.', 'error'); return; }
-      pendingApplicationJobId = job.id;
-      const suggested = suggestedCvLanguage(job);
-      const select = document.getElementById('application-cv-select');
-      select.innerHTML = state.cvs.map(cv => `<option value="${escapeHTML(cv.id)}">${escapeHTML(cv.name)}</option>`).join('');
-      const selected = state.cvs.find(cv => cv.language === suggested) || state.cvs.find(cv => cv.language === 'en') || state.cvs[0];
-      if (selected) select.value = selected.id;
-      document.getElementById('application-job-label').textContent = `${job.title} — ${job.company} (${job.location || 'lieu non précisé'})`;
-      document.getElementById('application-language-reason').textContent = `Suggestion : ${suggested.toUpperCase()} selon le pays / les indices de l’annonce. Tu peux choisir une autre langue.`;
-      document.getElementById('application-cv-file').value = '';
-      document.getElementById('application-cv-approved').checked = false;
-      document.getElementById('btn-confirm-application').disabled = true;
-      updateApplicationPreview();
-      toggleModal('application-modal-backdrop', true);
-    }
-    function updateApplicationPreview() {
-      const cv = state.cvs.find(item => item.id === document.getElementById('application-cv-select').value);
-      const preview = document.getElementById('application-cv-preview');
-      preview.src = cv?.pdfDataUri || 'about:blank';
-      preview.title = cv?.pdfDataUri ? `Aperçu du ${cv.name}` : 'PDF non encore importé pour ce profil';
-      const hasPdf = Boolean(cv?.pdfDataUri);
-      const approved = document.getElementById('application-cv-approved');
-      approved.disabled = !hasPdf;
-      if (!hasPdf) approved.checked = false;
-      document.getElementById('application-cv-file-status').textContent = hasPdf
-        ? `PDF chargé pour ${cv.name}. Vérifie l'aperçu avant de cocher la validation.`
-        : `Aucun PDF associé à ${cv?.name || 'ce profil'} : importe-le ci-dessus.`;
-      document.getElementById('application-language-reason').textContent = hasPdf
-        ? `Document prêt : ${cv.name}. Tu peux aussi changer de langue.`
-        : `Suggestion : ${cv?.language?.toUpperCase() || '—'}. Le PDF correspondant doit être chargé avant validation.`;
-      document.getElementById('btn-confirm-application').disabled = !(hasPdf && approved.checked);
-    }
-    function confirmApplication() {
-      const job = state.jobs.find(item => item.id === pendingApplicationJobId);
-      const cv = state.cvs.find(item => item.id === document.getElementById('application-cv-select').value);
-      const url = sanitizeUrl(job?.url || '');
-      if (!job || !cv || !cv.pdfDataUri || !url || !document.getElementById('application-cv-approved').checked) {
-        showToast('Charge le PDF, relis-le et coche la validation avant de continuer.', 'error'); return;
-      }
-      appendLog('Validation CV', `CV « ${cv.name} » validé manuellement pour « ${job.title} » ; ouverture de l'annonce.`, 'Terminé');
-      saveState();
-      const opened = window.open(url, '_blank', 'noopener,noreferrer');
-      toggleModal('application-modal-backdrop', false);
-      showToast(opened ? `CV ${cv.language.toUpperCase()} validé. Joins le PDF sur le site du recruteur.` : 'Le navigateur a bloqué la fenêtre. Utilise « Voir l’annonce » sur la fiche.', opened ? 'success' : 'error');
-      pendingApplicationJobId = null;
-    }
-
-    function bindEvents() {
-      document.getElementById('cv-pdf-file').addEventListener('change', (event) => { const file = event.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onload = () => { pendingCvPdfData = String(reader.result || ''); }; reader.readAsDataURL(file); } extractPdfText(file); });
-      document.getElementById('btn-analyze-cv-text').addEventListener('click', inferCvFieldsFromText);
-      document.getElementById('application-cv-select').addEventListener('change', () => { document.getElementById('application-cv-approved').checked = false; updateApplicationPreview(); });
-      document.getElementById('application-cv-file').addEventListener('change', (event) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-        if (file.type !== 'application/pdf' && !/\.pdf$/i.test(file.name)) { showToast('Sélectionne un fichier PDF.', 'error'); event.target.value = ''; return; }
-        if (file.size > 8 * 1024 * 1024) { showToast('Le PDF dépasse 8 Mo. Réduis sa taille avant import.', 'error'); event.target.value = ''; return; }
-        const cv = state.cvs.find(item => item.id === document.getElementById('application-cv-select').value);
-        if (!cv) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          cv.pdfDataUri = String(reader.result || '');
-          document.getElementById('application-cv-approved').checked = false;
-          saveState(); updateApplicationPreview();
-          showToast(`PDF chargé pour ${cv.name}. Relis-le puis coche la validation.`, 'success');
-        };
-        reader.onerror = () => showToast('Impossible de lire ce PDF. Réessaie.', 'error');
-        reader.readAsDataURL(file);
-      });
-      document.getElementById('application-cv-approved').addEventListener('change', () => {
-        const cv = state.cvs.find(item => item.id === document.getElementById('application-cv-select').value);
-        document.getElementById('btn-confirm-application').disabled = !(cv?.pdfDataUri && document.getElementById('application-cv-approved').checked);
-      });
-      document.getElementById('btn-confirm-application').addEventListener('click', confirmApplication);
-      document.getElementById('btn-cancel-application').addEventListener('click', () => toggleModal('application-modal-backdrop', false));
-      document.getElementById('btn-close-application-modal').addEventListener('click', () => toggleModal('application-modal-backdrop', false));
-      document.getElementById('application-modal-backdrop').addEventListener('click', (e) => { if (e.target.id === 'application-modal-backdrop') toggleModal('application-modal-backdrop', false); });
-
-      // Bouton principal "Tout actualiser" (strictement sur clic)
-      document.getElementById('btn-refresh-all').addEventListener('click', () => runAgents(null));
-
-      // Boutons d'ouverture des modales
-      document.getElementById('btn-open-job-modal').addEventListener('click', () => openJobModal(null));
-      document.getElementById('btn-open-cv-modal').addEventListener('click', () => openCvModal(null));
-      document.getElementById('btn-new-cv-inline').addEventListener('click', () => openCvModal(null));
-      document.getElementById('btn-open-agent-modal').addEventListener('click', () => openAgentModal(null));
-
-      // Fermeture des modales
-      document.getElementById('btn-close-job-modal').addEventListener('click', () => toggleModal('job-modal-backdrop', false));
-      document.getElementById('btn-cancel-job-modal').addEventListener('click', () => toggleModal('job-modal-backdrop', false));
-      document.getElementById('job-modal-backdrop').addEventListener('click', (e) => {
-        if (e.target.id === 'job-modal-backdrop') toggleModal('job-modal-backdrop', false);
-      });
-
-      document.getElementById('btn-close-cv-modal').addEventListener('click', () => toggleModal('cv-modal-backdrop', false));
-      document.getElementById('btn-cancel-cv-modal').addEventListener('click', () => toggleModal('cv-modal-backdrop', false));
-      document.getElementById('cv-modal-backdrop').addEventListener('click', (e) => {
-        if (e.target.id === 'cv-modal-backdrop') toggleModal('cv-modal-backdrop', false);
-      });
-
-      document.getElementById('btn-close-agent-modal').addEventListener('click', () => toggleModal('agent-modal-backdrop', false));
-      document.getElementById('btn-cancel-agent-modal').addEventListener('click', () => toggleModal('agent-modal-backdrop', false));
-      document.getElementById('agent-modal-backdrop').addEventListener('click', (e) => {
-        if (e.target.id === 'agent-modal-backdrop') toggleModal('agent-modal-backdrop', false);
-      });
-
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          toggleModal('job-modal-backdrop', false);
-          toggleModal('cv-modal-backdrop', false);
-          toggleModal('agent-modal-backdrop', false);
-        }
-      });
-
-      // Formulaire Offre
-      document.getElementById('form-job').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const existingId = document.getElementById('job-id').value.trim();
-        const rawUrl = document.getElementById('job-url').value.trim();
-        const cleanUrl = rawUrl ? sanitizeUrl(rawUrl) : '';
-
-        if (rawUrl && !cleanUrl) {
-          showToast('Ce lien est invalide ou générique. Colle l’URL de la fiche précise de l’offre (pas la page d’accueil ou de recherche).', 'error');
-          return;
-        }
-
-        const record = {
-          id: existingId || `job-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          title: document.getElementById('job-title').value.trim(),
-          company: document.getElementById('job-company').value.trim(),
-          location: document.getElementById('job-location').value.trim(),
-          status: document.getElementById('job-status').value,
-          source: document.getElementById('job-source').value.trim() || 'Ajout manuel',
-          url: cleanUrl,
-          salary: document.getElementById('job-salary').value.trim(),
-          skills: parseCommaList(document.getElementById('job-skills').value),
-          notes: document.getElementById('job-notes').value.trim(),
-          date: existingId
-            ? (state.jobs.find((j) => j.id === existingId)?.date || new Date().toISOString().slice(0, 10))
-            : new Date().toISOString().slice(0, 10)
-        };
-
-        if (!record.title || !record.company) {
-          showToast("L'intitulé du poste et l'entreprise sont requis.", 'error');
-          return;
-        }
-
-        if (existingId) {
-          const idx = state.jobs.findIndex((j) => j.id === existingId);
-          if (idx !== -1) state.jobs[idx] = record;
-          appendLog('Suivi Offres', `Offre « ${record.title} » mise à jour.`, 'Terminé');
-          showToast('Offre mise à jour et matching recalculé.', 'success');
-        } else {
-          state.jobs.unshift(record);
-          appendLog('Suivi Offres', `Nouvelle offre « ${record.title} » (${record.company}) ajoutée.`, 'Terminé');
-          showToast('Nouvelle offre ajoutée au tableau de bord.', 'success');
-        }
-
-        saveState();
-        toggleModal('job-modal-backdrop', false);
-        renderAll();
-      });
-
-      // Formulaire CV
-      document.getElementById('form-cv').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const existingId = document.getElementById('cv-id').value.trim();
-        const skills = parseCommaList(document.getElementById('cv-skills').value);
-        if (!skills.length) {
-          showToast('Ajoutez au moins une compétence clé pour le CV.', 'error');
-          return;
-        }
-
-        const cvRecord = {
-          id: existingId || `cv-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          name: document.getElementById('cv-name').value.trim(),
-          headline: document.getElementById('cv-headline').value.trim(),
-          skills,
-          summary: document.getElementById('cv-summary').value.trim(),
-          rawText: document.getElementById('cv-raw-text').value.trim(),
-          language: existingId === 'cv-damien-fr' ? 'fr' : existingId === 'cv-damien-en' ? 'en' : existingId === 'cv-damien-es' ? 'es' : 'fr',
-          pdfDataUri: pendingCvPdfData || state.cvs.find(c => c.id === existingId)?.pdfDataUri || null
-        };
-
-        if (existingId) {
-          const idx = state.cvs.findIndex((c) => c.id === existingId);
-          if (idx !== -1) state.cvs[idx] = cvRecord;
-          appendLog('Gestionnaire CVs', `« ${cvRecord.name} » mis à jour — scores de matching recalculés.`, 'Terminé');
-          showToast('CV mis à jour et matching recalculé.', 'success');
-        } else {
-          state.cvs.push(cvRecord);
-          appendLog('Gestionnaire CVs', `Nouveau profil « ${cvRecord.name} » ajouté.`, 'Terminé');
-          showToast('Nouveau CV enregistré.', 'success');
-        }
-
-        saveState();
-        toggleModal('cv-modal-backdrop', false);
-        renderAll();
-      });
-
-      // Formulaire Agent IA
-      document.getElementById('form-agent').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const existingId = document.getElementById('agent-id').value.trim();
-        const name = document.getElementById('agent-name').value.trim();
-        const role = document.getElementById('agent-role').value.trim();
-        const keywords = parseCommaList(document.getElementById('agent-keywords').value);
-
-        if (existingId) {
-          const ag = state.agents.find((a) => a.id === existingId);
-          if (ag) {
-            ag.name = name;
-            ag.role = role;
-            ag.keywords = keywords;
-          }
-          showToast(`Agent « ${name} » enregistré.`, 'success');
-        } else {
-          state.agents.push({
-            id: `agent-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-            name,
-            role,
-            keywords: keywords.length ? keywords : ['b2b', 'product management'],
-            status: 'En attente',
-            lastRun: null,
-            candidateJob: {
-              title: `${keywords[0] ? keywords[0].toUpperCase() : 'Consultant'} — Mission Ciblée`,
-              company: 'Nouvelle Opportunité Détectée',
-              location: 'France / Hybride',
-              salary: '55k – 65k € • CDI',
-              source: `${name} • Adzuna`,
-              url: 'https://www.adzuna.fr',
-              skills: keywords.length ? keywords : ['b2b', 'conseil'],
-              notes: `Détectée par ${name}.`
-            }
-          });
-          appendLog(name, 'Nouvel agent IA créé en statut En attente.', 'En attente');
-          showToast(`Nouvel agent IA « ${name} » ajouté.`, 'success');
-        }
-
-        saveState();
-        toggleModal('agent-modal-backdrop', false);
-        renderAll();
-      });
-
-      document.getElementById('btn-delete-agent').addEventListener('click', () => {
-        const id = document.getElementById('agent-id').value.trim();
-        if (!id || state.agents.length <= 1) return;
-        const removed = state.agents.find((a) => a.id === id);
-        state.agents = state.agents.filter((a) => a.id !== id);
-        if (state.filters.agent === removed?.name) {
-          state.filters.agent = 'ALL';
-        }
-        saveState();
-        toggleModal('agent-modal-backdrop', false);
-        renderAll();
-        showToast(`Agent « ${removed?.name || 'IA'} » supprimé.`, 'info');
-      });
-
-      // Sélecteur de CV de référence
-      document.getElementById('reference-cv-select').addEventListener('change', (e) => {
-        state.referenceCvMode = e.target.value;
-        saveState();
-        renderAll();
-      });
-
-      // Actions sur cartes CVs
-      document.getElementById('cv-cards-grid').addEventListener('click', (e) => {
-        const useBtn = e.target.closest('[data-use-cv]');
-        if (useBtn) {
-          state.referenceCvMode = useBtn.dataset.useCv;
-          saveState();
-          renderAll();
-          return;
-        }
-
-        const editBtn = e.target.closest('[data-edit-cv]');
-        if (editBtn) {
-          const found = state.cvs.find((c) => c.id === editBtn.dataset.editCv);
-          if (found) openCvModal(found);
-          return;
-        }
-
-        const delBtn = e.target.closest('[data-delete-cv]');
-        if (delBtn && state.cvs.length > 1) {
-          const id = delBtn.dataset.deleteCv;
-          state.cvs = state.cvs.filter((c) => c.id !== id);
-          if (state.referenceCvMode === id) state.referenceCvMode = 'BEST_AUTO';
-          saveState();
-          renderAll();
-          showToast('CV supprimé.', 'info');
-        }
-      });
-
-      // Actions sur offres d'emploi (statut, copier lien, éditer, supprimer)
-      const jobsListEl = document.getElementById('jobs-list');
-      jobsListEl.addEventListener('change', (e) => {
-        const sel = e.target.closest('[data-job-status-id]');
-        if (!sel) return;
-        const job = state.jobs.find((j) => j.id === sel.dataset.jobStatusId);
-        if (!job) return;
-        const previousStatus = job.status;
-        if (sel.value === 'Clôturé' && previousStatus !== 'Clôturé') {
-          const confirmed = window.confirm(`Clôturer le dossier « ${job.title} » chez ${job.company} ?\n\nL'application conservera une trace locale du dossier. Aucun email Gmail ne sera supprimé par cette action.`);
-          if (!confirmed) { sel.value = previousStatus; return; }
-          const closedAt = new Date().toISOString();
-          const trace = {
-            id: `case-${job.id}-${Date.now()}`,
-            jobId: job.id,
-            title: job.title,
-            company: job.company,
-            location: job.location || '',
-            source: job.source || '',
-            url: job.url || '',
-            previousStatus,
-            finalStatus: 'Clôturé',
-            closedAt,
-            note: 'Dossier clôturé dans le tableau de bord. Historique de candidature conservé localement. Nettoyage Gmail non exécuté : connexion Gmail de l’application non configurée.',
-            gmailCleanup: 'non_connecte_validation_requise'
-          };
-          state.closedCases = Array.isArray(state.closedCases) ? state.closedCases : [];
-          state.closedCases.unshift(trace);
-          job.closedAt = closedAt;
-          job.closureTraceId = trace.id;
-        }
-        job.status = sel.value;
-        appendLog('Suivi Candidatures', `Statut de « ${job.title} » passé de « ${previousStatus} » à « ${job.status} ». ${job.status === 'Clôturé' ? 'Trace conservée ; Gmail non modifié.' : ''}`, 'Terminé');
-        saveState();
-        renderKPIs();
-        renderJobs();
-        renderActivityLog();
-        renderClosedCases();
-        showToast(job.status === 'Clôturé' ? 'Dossier clôturé : traçabilité conservée. Aucun email Gmail supprimé.' : `Statut : ${job.status}`, 'success');
-      });
-
-      jobsListEl.addEventListener('click', (e) => {
-        const applyBtn = e.target.closest('[data-apply-job]');
-        if (applyBtn) { const job = state.jobs.find((j) => j.id === applyBtn.dataset.applyJob); if (job) showApplicationModal(job); return; }
-        const copyBtn = e.target.closest('[data-copy-url]');
-        if (copyBtn) {
-          const job = state.jobs.find((j) => j.id === copyBtn.dataset.copyUrl);
-          const safeUrl = sanitizeUrl(job?.url || '');
-          if (!safeUrl) {
-            showToast('Aucun lien valide enregistré sur cette offre.', 'error');
-            return;
-          }
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(safeUrl).then(
-              () => showToast('Lien de candidature copié dans le presse-papiers.', 'success'),
-              () => copyFallback(safeUrl)
-            );
-          } else {
-            copyFallback(safeUrl);
-          }
-          return;
-        }
-
-        const editBtn = e.target.closest('[data-edit-job]');
-        if (editBtn) {
-          const job = state.jobs.find((j) => j.id === editBtn.dataset.editJob);
-          if (job) openJobModal(job);
-          return;
-        }
-
-        const delBtn = e.target.closest('[data-delete-job]');
-        if (delBtn) {
-          const job = state.jobs.find((j) => j.id === delBtn.dataset.deleteJob);
-          if (!job) return;
-          state.jobs = state.jobs.filter((j) => j.id !== job.id);
-          appendLog('Suivi Offres', `Offre « ${job.title} » supprimée.`, 'Terminé');
-          saveState();
-          renderAll();
-          showToast(`Offre « ${job.title} » supprimée.`, 'info');
-        }
-      });
-
-      // Actions sur agents IA
-      document.getElementById('agents-grid').addEventListener('click', (e) => {
-        const runBtn = e.target.closest('[data-run-agent]');
-        if (runBtn) {
-          runAgents(runBtn.dataset.runAgent);
-          return;
-        }
-
-        const inspectBtn = e.target.closest('[data-inspect-agent]');
-        if (inspectBtn) {
-          const ag = state.agents.find((a) => a.id === inspectBtn.dataset.inspectAgent);
-          if (ag) openAgentModal(ag);
-        }
-      });
-
-      // Journal d'activité : effacer
-      document.getElementById('btn-clear-logs').addEventListener('click', () => {
-        state.logs = [];
-        saveState();
-        renderActivityLog();
-        showToast('Journal d’activité effacé.', 'info');
-      });
-
-      // Filtres & tri des offres
-      document.getElementById('job-search').addEventListener('input', (e) => {
-        state.filters.search = e.target.value;
-        renderJobs();
-      });
-
-      document.getElementById('job-filter-status').addEventListener('change', (e) => {
-        state.filters.status = e.target.value;
-        renderJobs();
-      });
-
-      document.getElementById('job-filter-match').addEventListener('change', (e) => {
-        state.filters.minMatch = Number(e.target.value || 0);
-        renderJobs();
-      });
-
-      document.getElementById('job-filter-agent').addEventListener('change', (e) => {
-        state.filters.agent = e.target.value;
-        renderJobs();
-      });
-
-      document.getElementById('job-sort').addEventListener('change', (e) => {
-        state.filters.sort = e.target.value;
-        renderJobs();
-      });
-
-      document.getElementById('btn-reset-job-filters').addEventListener('click', () => {
-        state.filters = { search: '', status: 'ALL', minMatch: 0, agent: 'ALL', sort: 'match_desc' };
-        document.getElementById('job-search').value = '';
-        document.getElementById('job-filter-status').value = 'ALL';
-        document.getElementById('job-filter-match').value = '0';
-        document.getElementById('job-filter-agent').value = 'ALL';
-        document.getElementById('job-sort').value = 'match_desc';
-        renderJobs();
-      });
-
-      // Réinitialisation complète des données
-      document.getElementById('btn-reset-data').addEventListener('click', () => {
-        seedDefaultState();
-        saveState();
-        state.filters = { search: '', status: 'ALL', minMatch: 0, agent: 'ALL', sort: 'match_desc' };
-        document.getElementById('job-search').value = '';
-        document.getElementById('job-filter-status').value = 'ALL';
-        document.getElementById('job-filter-match').value = '0';
-        document.getElementById('job-filter-agent').value = 'ALL';
-        document.getElementById('job-sort').value = 'match_desc';
-        document.getElementById('global-last-refresh').textContent = 'Jamais (en attente)';
-        document.getElementById('global-refresh-status').textContent = 'Prêt au lancement — cliquez sur Tout actualiser';
-        renderAll();
-        showToast('Données initiales restaurées (agents en attente).', 'success');
-      });
-    }
-
-    function copyFallback(text) {
-      const helper = document.createElement('textarea');
-      helper.value = text;
-      helper.style.position = 'fixed';
-      helper.style.opacity = '0';
-      document.body.appendChild(helper);
-      helper.select();
-      try {
-        document.execCommand('copy');
-        showToast('Lien copié dans le presse-papiers.', 'success');
-      } catch (_) {
-        showToast('Copie manuelle requise.', 'error');
-      } finally {
-        helper.remove();
-      }
-    }
-
-    // =========================================================================
-    // DÉMARRAGE (ZÉRO EXÉCUTION AUTOMATIQUE DES AGENTS)
-    // =========================================================================
-    document.addEventListener('DOMContentLoaded', () => {
-      loadState();
-      if (state.lastGlobalRefresh) {
-        document.getElementById('global-last-refresh').textContent = state.lastGlobalRefresh;
-      }
-      bindEvents();
-      renderAll();
-    });
-  </script>
+    save(); renderAll();
+  }
+  S.last = now(); S.running = false; $('bAll').disabled = false; $('gs').textContent = 'Actualisation terminée.'; save(); renderAll(); toast('Actualisation terminée.','success');
+}
+
+function renderKPIs(){
+  const n = s => S.jobs.filter(j => j.status === s).length, sc = S.jobs.map(j => match(j).score);
+  const k = [['Offres suivies', S.jobs.length, `${n('À postuler')} à postuler, ${n('Postulé')} postulées`],['Matching moyen', (sc.length ? Math.round(sc.reduce((a,b)=>a+b,0)/sc.length) : 0) + ' %', `Meilleur : ${sc.length ? Math.max(...sc) : 0} %`],['Entretiens et offres', n('Entretien')+n('Offre reçue'), `${n('Refusé')} refus`],['Relances à faire', n('Relance à faire'), `${S.mails.length} mail(s) Gmail analysé(s)`],['Agents', AGENTS.length, `${Object.values(S.ag).filter(a => a.status==='Terminé').length} terminé(s)`]];
+  $('kpis').innerHTML = k.map(x => `<div class="bg-white rounded-xl border p-4"><div class="text-xs font-semibold text-slate-500">${x[0]}</div><div class="text-2xl font-extrabold mt-1">${x[1]}</div><p class="text-xs text-slate-500 mt-1">${esc(x[2])}</p></div>`).join('');
+}
+function renderCVs(){
+  $('refcv').innerHTML = `<option value="BEST">Meilleur CV (automatique)</option>` + S.cvs.map(c => `<option value="${esc(c.id)}" ${S.ref===c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+  $('cvs').innerHTML = S.cvs.map(c => `<div class="rounded-xl border p-4 ${S.ref===c.id?'border-indigo-600':''}"><h3 class="text-sm font-bold">${esc(c.name)}</h3><p class="text-xs text-indigo-800">${esc(c.headline)}</p><p class="text-xs text-slate-600 mt-2">${esc(c.skills.slice(0,8).join(', '))}${c.skills.length>8?` (+${c.skills.length-8})`:''}</p><div class="flex gap-2 mt-3"><button data-act="usecv" data-id="${esc(c.id)}" class="btn border bg-white">Utiliser</button><button data-act="skills" data-id="${esc(c.id)}" class="btn border bg-white">Modifier les mots-clés</button></div></div>`).join('');
+}
+function renderJobs(){
+  const q = nt(S.f.q);
+  const rows = S.jobs.map(j => ({j, m:match(j)})).filter(({j,m}) => (S.f.st==='ALL' || j.status===S.f.st) && m.score >= S.f.min && (!q || nt(`${j.title} ${j.company} ${j.location} ${j.source} ${j.notes}`).includes(q)))
+    .sort((a,b) => S.f.sort==='date' ? String(b.j.date).localeCompare(String(a.j.date)) : S.f.sort==='status' ? ST.indexOf(a.j.status)-ST.indexOf(b.j.status) : b.m.score-a.m.score);
+  $('jcount').textContent = rows.length; $('jempty').classList.toggle('hidden', rows.length > 0);
+  $('jobs').innerHTML = rows.map(({j,m}) => `<article class="rounded-xl border p-4 flex flex-col lg:flex-row gap-4 justify-between">
+    <div class="min-w-0 space-y-1">
+      <div class="flex flex-wrap items-center gap-2"><h3 class="font-bold">${esc(j.title)}</h3><span class="chip bg-slate-100 border-slate-200">${esc(j.company)}</span>${j.source?`<span class="chip bg-sky-50 text-sky-800 border-sky-200">${esc(j.source)}</span>`:''}</div>
+      <p class="text-xs text-slate-600">${esc(j.location||'Lieu non précisé')}${j.salary?' • '+esc(j.salary):''} • ${esc(j.date||'')}${j.lastMail?' • dernier mail '+esc(j.lastMail):''}</p>
+      ${j.notes?`<p class="text-xs text-slate-600 bg-slate-50 rounded-lg px-3 py-2 line-clamp-3">${esc(j.notes)}</p>`:''}
+      <p class="text-xs"><b>CV :</b> ${esc(m.cv.name)} ${m.m.slice(0,5).map(s=>`<span class="chip bg-emerald-50 text-emerald-800 border-emerald-200">${esc(s)}</span>`).join(' ')}</p>
+    </div>
+    <div class="lg:w-60 shrink-0 space-y-2">
+      <div class="flex justify-between text-xs font-semibold"><span>Matching</span><span>${m.score} %</span></div>
+      <div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-indigo-600" style="width:${m.score}%"></div></div>
+      <select data-st="${esc(j.id)}" class="inp font-bold ${STC[j.status]||''}">${ST.map(s=>`<option ${s===j.status?'selected':''}>${s}</option>`).join('')}</select>
+      <div class="flex flex-wrap gap-1">${j.url?`<a href="${esc(j.url)}" target="_blank" rel="noopener noreferrer" class="btn bg-indigo-700 text-white">Voir l’annonce</a><button data-act="copy" data-id="${esc(j.id)}" class="btn border bg-white">Copier</button>`:`<span class="text-xs text-amber-800">Lien manquant</span>`}<button data-act="edit" data-id="${esc(j.id)}" class="btn border bg-white">Modifier</button><button data-act="del" data-id="${esc(j.id)}" class="btn border border-rose-200 text-rose-700 bg-white">Supprimer</button></div>
+    </div></article>`).join('');
+}
+function renderMails(){
+  $('mails').innerHTML = S.mails.length ? S.mails.slice(0,15).map(e => `<div class="flex flex-wrap items-center gap-2 text-sm border-b pb-2"><span class="text-xs text-slate-500 w-24">${esc(e.date||'')}</span><b>${esc(e.entreprise||'')}</b><span class="text-slate-600">${esc(e.poste||'')}</span><span class="chip ${STC[e.statut]||'bg-slate-100 border-slate-200'}">${esc(e.statut||'')}</span><span class="text-xs text-slate-500 truncate">${esc(e.sujet||'')}</span></div>`).join('') : '<p class="text-sm text-slate-500">Aucun retour chargé. Lance l’agent « Gmail : candidatures et retours » une fois la route <code>/api/gmail</code> installée.</p>';
+}
+function renderAgents(){
+  $('agents').innerHTML = AGENTS.map(a => { const s = S.ag[a.id] || {status:'En attente'}; return `<div class="rounded-xl border p-4 flex flex-col justify-between gap-3"><div><div class="flex justify-between gap-2"><h3 class="text-sm font-bold">${esc(a.name)}</h3><span class="chip shrink-0 ${AGC[s.status]||AGC['En attente']}">${esc(s.status)}</span></div><p class="text-xs text-slate-600 mt-1">${esc(a.role)}</p>${s.msg?`<p class="text-xs text-slate-500 mt-1">${esc(s.msg)}</p>`:''}</div><div class="flex items-center justify-between"><span class="text-[11px] text-slate-500">${s.lastRun?'Dernier passage : '+esc(s.lastRun):'Jamais exécuté'}</span><button data-act="run" data-id="${a.id}" ${S.running?'disabled':''} class="btn bg-indigo-700 text-white">Lancer</button></div></div>`; }).join('');
+}
+function renderLog(){
+  $('log').innerHTML = S.logs.length ? S.logs.map(l => `<div class="rounded-lg border p-2"><div class="flex justify-between gap-2"><b class="text-xs">${esc(l.agent)}</b><span class="chip ${AGC[l.badge]||''}">${esc(l.badge)}</span></div><p class="text-xs text-slate-600">${esc(l.message)}</p><span class="text-[10px] text-slate-400">${esc(l.time)}</span></div>`).join('') : '<p class="text-xs text-slate-500 text-center py-6">Aucune activité.</p>';
+}
+function renderAll(){ $('gl').textContent = S.last || 'jamais'; renderKPIs(); renderCVs(); renderJobs(); renderMails(); renderAgents(); renderLog(); }
+
+function openJob(j){
+  $('fj').reset(); $('j-status').innerHTML = ST.map(s => `<option>${s}</option>`).join(''); $('jmt').textContent = j ? 'Modifier l’offre' : 'Ajouter une offre'; $('j-id').value = j?.id || '';
+  if (j){ $('j-title').value = j.title; $('j-company').value = j.company; $('j-location').value = j.location||''; $('j-status').value = j.status; $('j-url').value = j.url||''; $('j-skills').value = (j.skills||[]).join(', '); $('j-notes').value = j.notes||''; }
+  $('jm').showModal();
+}
+$('fj').addEventListener('submit', e => {
+  e.preventDefault(); const raw = $('j-url').value.trim(), url = cleanUrl(raw), id = $('j-id').value;
+  if (raw && !url) return toast('Lien invalide ou générique : colle l’URL de la fiche précise.','error');
+  const old = S.jobs.find(j => j.id === id), status = $('j-status').value;
+  const rec = {...(old||{}), id: id || rid(), title:$('j-title').value.trim(), company:$('j-company').value.trim(), location:$('j-location').value.trim(), status, url, skills:csv($('j-skills').value), notes:$('j-notes').value.trim(), source:old?.source || 'Ajout manuel', date:old?.date || new Date().toISOString().slice(0,10)};
+  if (status === 'Postulé' && !rec.appliedAt) rec.appliedAt = new Date().toISOString().slice(0,10);
+  if (old) S.jobs[S.jobs.indexOf(old)] = rec; else S.jobs.unshift(rec);
+  save(); $('jm').close(); renderAll(); toast('Offre enregistrée.','success');
+});
+
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-act]'); if (!b) return; const a = b.dataset.act, id = b.dataset.id;
+  if (a==='newjob') openJob();
+  else if (a==='closejm') $('jm').close();
+  else if (a==='edit') openJob(S.jobs.find(j => j.id === id));
+  else if (a==='del'){ const j = S.jobs.find(x => x.id === id); if (j && confirm(`Supprimer « ${j.title} » ?`)){ S.jobs = S.jobs.filter(x => x.id !== id); save(); renderAll(); } }
+  else if (a==='copy'){ const j = S.jobs.find(x => x.id === id); try { await navigator.clipboard.writeText(j.url); toast('Lien copié.','success'); } catch { toast('Copie impossible : sélectionne le lien manuellement.','error'); } }
+  else if (a==='run') run([id]);
+  else if (a==='usecv'){ S.ref = id; save(); renderAll(); }
+  else if (a==='skills'){ const cv = S.cvs.find(c => c.id === id), v = prompt('Mots-clés du CV, séparés par des virgules', cv.skills.join(', ')); if (v !== null && csv(v).length){ cv.skills = csv(v); save(); renderAll(); } }
+  else if (a==='clearlog'){ S.logs = []; save(); renderLog(); }
+  else if (a==='reset'){ if (confirm('Effacer toutes les données locales (offres, CV, journal) ?')){ localStorage.removeItem(KEY); localStorage.removeItem(OLD); load(); S.jobs = []; S.cvs = structuredClone(CVS); S.logs = []; S.mails = []; S.ag = {}; S.last = null; save(); renderAll(); toast('Données locales effacées.','info'); } }
+});
+$('jobs').addEventListener('change', e => {
+  const sel = e.target.closest('[data-st]'); if (!sel) return; const j = S.jobs.find(x => x.id === sel.dataset.st); if (!j) return;
+  if (sel.value === 'Clôturé' && !confirm(`Clôturer « ${j.title} » ? Aucun email Gmail ne sera supprimé.`)){ sel.value = j.status; return; }
+  log('Suivi', `« ${j.title} » : ${j.status} → ${sel.value}.`, 'Terminé'); j.status = sel.value;
+  if (j.status === 'Postulé' && !j.appliedAt) j.appliedAt = new Date().toISOString().slice(0,10);
+  save(); renderAll();
+});
+$('bAll').addEventListener('click', () => run(null));
+$('refcv').addEventListener('change', e => { S.ref = e.target.value; save(); renderAll(); });
+$('fst').innerHTML = `<option value="ALL">Tous statuts</option>` + ST.map(s => `<option>${s}</option>`).join('');
+$('fq').addEventListener('input', e => { S.f.q = e.target.value; renderJobs(); });
+$('fst').addEventListener('change', e => { S.f.st = e.target.value; renderJobs(); });
+$('fmin').addEventListener('change', e => { S.f.min = +e.target.value; renderJobs(); });
+$('fso').addEventListener('change', e => { S.f.sort = e.target.value; renderJobs(); });
+
+load(); renderAll();
+</script>
 </body>
 </html>
