@@ -50,7 +50,7 @@ export default async function handler(req, res) {
       lien_offre: o.origineOffre?.urlOrigine || null,
       description: o.description || "",
       date_publication: o.dateCreation || null,
-      salaire_min: o.salaire?.libelle ? null : null, // France Travail renvoie souvent un texte, à parser si besoin
+      salaire_min: null,
       salaire_max: null,
       contrat: o.typeContrat || null,
       pays: "fr",
